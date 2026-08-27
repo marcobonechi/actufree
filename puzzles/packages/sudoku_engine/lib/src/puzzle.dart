@@ -10,6 +10,7 @@ final class SudokuPuzzle {
   const SudokuPuzzle({
     required this.givens,
     required this.solution,
+    required this.difficulty,
     required this.rating,
     required this.seed,
   });
@@ -39,9 +40,14 @@ final class SudokuPuzzle {
       }
       used[technique] = value;
     });
+    final tier = json['difficulty'];
     return SudokuPuzzle(
       givens: SudokuBoard.fromJson(givens),
       solution: SudokuBoard.fromJson(solution),
+      difficulty: Difficulty.values.firstWhere(
+        (Difficulty value) => value.name == tier,
+        orElse: () => throw FormatException('unknown difficulty "$tier"'),
+      ),
       rating: ratingFrom(used),
       seed: seed,
     );
@@ -53,7 +59,17 @@ final class SudokuPuzzle {
   /// The one board that completes [givens].
   final SudokuBoard solution;
 
-  /// How hard it is, and why.
+  /// The tier this puzzle was generated for.
+  ///
+  /// Distinct from [rating], which measures what solving it actually took. A
+  /// tier is a promise about the shape of the puzzle — how many clues it
+  /// starts with, and the hardest technique it may demand — not a claim that
+  /// every puzzle in it needs that technique. Insisting on the latter forced
+  /// medium puzzles sparser than hard ones, since making a naked pair
+  /// *necessary* means stripping the grid until singles run out.
+  final Difficulty difficulty;
+
+  /// What solving it actually took.
   final DifficultyRating rating;
 
   /// The generator seed that produced it, so a report can be reproduced.
@@ -63,9 +79,6 @@ final class SudokuPuzzle {
   int get clueCount =>
       Cell.all.where((cell) => givens.valueAt(cell) != null).length;
 
-  /// The tier this puzzle was rated into.
-  Difficulty get difficulty => rating.tier;
-
   /// A lossless representation.
   ///
   /// The rating is stored as its technique counts rather than its tier, so a
@@ -74,6 +87,7 @@ final class SudokuPuzzle {
   Map<String, Object?> toJson() => <String, Object?>{
         'version': 1,
         'seed': seed,
+        'difficulty': difficulty.name,
         'givens': givens.toJson(),
         'solution': solution.toJson(),
         'techniquesUsed': <String, int>{

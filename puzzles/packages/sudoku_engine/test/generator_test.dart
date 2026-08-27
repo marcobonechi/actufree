@@ -52,10 +52,18 @@ void main() {
 
     test('maxAttempts must be positive', () {
       expect(
-        () => const SudokuGenerator(1)
-            .generate(Difficulty.easy, maxAttempts: 0),
+        () => const SudokuGenerator(1).generate(Difficulty.easy, maxAttempts: 0),
         throwsArgumentError,
       );
+    });
+
+    test('the requested tier is what the puzzle reports', () {
+      for (final difficulty in Difficulty.values) {
+        expect(
+          SudokuGenerator(7).generate(difficulty).difficulty,
+          difficulty,
+        );
+      }
     });
   });
 
@@ -101,16 +109,67 @@ void main() {
       expect(puzzle.clueCount, puzzle.givens.toCompactString().replaceAll('.', '').length);
     });
 
-    test('is rated at the requested tier', () {
+    test('never demands a technique above its tier', () {
+      // The tier is a ceiling on the reasoning required, so a medium puzzle
+      // may turn out to need only singles, but never a swordfish.
       for (final difficulty in Difficulty.values) {
         for (var seed = 0; seed < seeds; seed++) {
           final puzzle = SudokuGenerator(seed).generate(difficulty);
-          expect(puzzle.difficulty, difficulty,
-              reason: '$difficulty seed $seed came back as '
-                  '${puzzle.rating.tier} (hardest '
-                  '${puzzle.rating.hardestTechnique})');
-          expect(puzzle.rating.tier, puzzle.difficulty);
+          expect(puzzle.difficulty, difficulty);
+          expect(puzzle.rating.tier.index, lessThanOrEqualTo(difficulty.index),
+              reason: '$difficulty seed $seed needed '
+                  '${puzzle.rating.hardestTechnique}');
         }
+      }
+    });
+
+    test('starts with more clues the easier the tier', () {
+      // The other half of what a tier promises: an easy puzzle is easy partly
+      // because there is less of the grid to search.
+      var previous = cellCount;
+      for (final difficulty in Difficulty.values) {
+        var clues = 0;
+        for (var seed = 0; seed < seeds; seed++) {
+          clues += SudokuGenerator(seed).generate(difficulty).clueCount;
+        }
+        final average = clues / seeds;
+        expect(average, lessThan(previous),
+            reason: '$difficulty averages $average clues');
+        previous = average.round();
+      }
+    });
+
+    test('an easy puzzle is actually easy', () {
+      // The complaint this tier exists to answer: a puzzle can be "singles
+      // only" and still be a slog if two thirds of the grid is empty, because
+      // the work moves from deducing to hunting.
+      for (var seed = 0; seed < seeds; seed++) {
+        final puzzle = SudokuGenerator(seed).generate(Difficulty.easy);
+        expect(puzzle.clueCount, greaterThanOrEqualTo(40),
+            reason: 'easy seed $seed starts with only ${puzzle.clueCount}');
+        expect(puzzle.rating.tier, Difficulty.easy);
+        expect(
+          puzzle.rating.techniquesUsed.keys,
+          everyElement(
+            anyOf(Technique.nakedSingle, Technique.hiddenSingle),
+          ),
+        );
+      }
+    });
+
+    test('the harder the tier, the more the reasoning costs', () {
+      // Clue count is only half of it; the brief asks for difficulty derived
+      // from the techniques a puzzle requires.
+      var previous = 0;
+      for (final difficulty in Difficulty.values) {
+        var score = 0;
+        for (var seed = 0; seed < seeds; seed++) {
+          score += SudokuGenerator(seed).generate(difficulty).rating.score;
+        }
+        final average = score ~/ seeds;
+        expect(average, greaterThan(previous),
+            reason: '$difficulty scores $average');
+        previous = average;
       }
     });
 
