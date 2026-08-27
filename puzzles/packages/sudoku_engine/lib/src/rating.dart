@@ -10,12 +10,16 @@ Difficulty tierOf(Technique technique) {
     case Technique.nakedPair:
     case Technique.hiddenPair:
     case Technique.nakedTriple:
+    case Technique.hiddenTriple:
     case Technique.pointingPair:
     case Technique.boxLineReduction:
       return Difficulty.medium;
     case Technique.xWing:
     case Technique.yWing:
+    case Technique.xyzWing:
+    case Technique.swordfish:
       return Difficulty.hard;
+    case Technique.simpleColouring:
     case Technique.guess:
       return Difficulty.expert;
   }
@@ -45,12 +49,20 @@ int weightOf(Technique technique) {
       return 8;
     case Technique.nakedTriple:
       return 10;
+    case Technique.hiddenTriple:
+      return 12;
     case Technique.xWing:
       return 20;
     case Technique.yWing:
       return 24;
+    case Technique.xyzWing:
+      return 28;
+    case Technique.swordfish:
+      return 32;
+    case Technique.simpleColouring:
+      return 45;
     case Technique.guess:
-      return 60;
+      return 90;
   }
 }
 

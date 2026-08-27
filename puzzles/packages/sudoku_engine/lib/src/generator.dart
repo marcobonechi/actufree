@@ -37,12 +37,13 @@ final class SudokuGenerator {
   /// tier. Falls back to the closest tier reached after [maxAttempts] full
   /// grids, rather than looping forever on an unlucky seed.
   ///
-  /// One carve costs about 3ms and lands on the requested tier roughly 100%
-  /// of the time for [Difficulty.easy], 31% for [Difficulty.medium], 37% for
-  /// [Difficulty.expert] and only 6% for [Difficulty.hard] — puzzles that
-  /// genuinely require an X-wing or Y-wing are rare among minimal grids. The
-  /// default budget is sized so that even the hard tier lands well over 99%
-  /// of the time while the worst case stays under a third of a second.
+  /// A single carve lands on the requested tier well under half the time for
+  /// the upper tiers — puzzles that genuinely require a swordfish or a
+  /// colouring chain are uncommon among minimal grids — so the budget covers
+  /// many attempts. In practice every tier lands on target with a worst case
+  /// around a tenth of a second.
+  ///
+  /// No generated puzzle ever requires a guess: see [_carve].
   SudokuPuzzle generate(Difficulty target, {int maxAttempts = 100}) {
     if (maxAttempts < 1) {
       throw ArgumentError.value(maxAttempts, 'maxAttempts', 'must be positive');
@@ -86,11 +87,12 @@ final class SudokuGenerator {
     final working = Int8List.fromList(solved);
     final order = List<int>.generate(cellCount, (index) => index)
       ..shuffle(random);
-    // Above `expert` there is no ceiling to enforce: any removal that keeps
-    // the solution unique is fair game.
-    final ceiling = target == Difficulty.expert
-        ? null
-        : techniquesUpTo(target).toSet();
+    // Guessing is never allowed, at any tier. A puzzle that cannot be reasoned
+    // out is a worse puzzle, not a harder one, so `expert` means "needs the
+    // most advanced technique implemented" rather than "needs trial and
+    // error". This also keeps the hint button useful on every generated
+    // puzzle.
+    final ceiling = techniquesUpTo(target).toSet()..remove(Technique.guess);
     for (final index in order) {
       final clue = working[index];
       if (clue == 0) continue;
@@ -115,8 +117,7 @@ final class SudokuGenerator {
     return search.solutionCount == 1;
   }
 
-  static bool _withinCeiling(Int8List values, Set<Technique>? ceiling) {
-    if (ceiling == null) return true;
+  static bool _withinCeiling(Int8List values, Set<Technique> ceiling) {
     final grid = CandidateGrid.fromDigits(values);
     if (grid == null) return false;
     if (!runLogic(grid, <Technique, int>{}, allowed: ceiling)) return false;

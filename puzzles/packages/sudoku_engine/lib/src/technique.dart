@@ -2,7 +2,8 @@
 ///
 /// The order is significant: difficulty is rated from the hardest technique a
 /// puzzle forces the solver to reach for, so these must stay sorted by
-/// increasing difficulty.
+/// increasing difficulty. Values are serialised by name, so new techniques can
+/// be inserted without invalidating stored puzzles.
 enum Technique {
   /// A cell has exactly one candidate left.
   nakedSingle('Naked single'),
@@ -21,6 +22,9 @@ enum Technique {
   /// Three cells in a unit between them hold only three candidates.
   nakedTriple('Naked triple'),
 
+  /// Three digits are confined to the same three cells of a unit.
+  hiddenTriple('Hidden triple'),
+
   /// A digit's candidates within a box all lie on one row or column, so it
   /// can be excluded from the rest of that line.
   pointingPair('Pointing pair'),
@@ -34,6 +38,17 @@ enum Technique {
 
   /// A pivot cell with two candidates sees two pincers that share a digit.
   yWing('Y-wing'),
+
+  /// A three-candidate pivot sees two pincers; all three share one digit.
+  xyzWing('XYZ-wing'),
+
+  /// A digit occupies the same three columns across three rows (or the
+  /// reverse) — the three-line form of an X-wing.
+  swordfish('Swordfish'),
+
+  /// A digit's conjugate pairs are chained and two-coloured; either a colour
+  /// repeats inside a unit, or an outside cell sees both colours.
+  simpleColouring('Simple colouring'),
 
   /// No logical step was available; the value was found by trial and error.
   guess('Guess');

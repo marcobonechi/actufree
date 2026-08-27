@@ -114,6 +114,23 @@ void main() {
       }
     });
 
+    test('never requires a guess', () {
+      // The point of the tiers: a puzzle that cannot be reasoned out is a
+      // worse puzzle, not a harder one. Expert means "needs the most advanced
+      // technique implemented", and the hint button works on every puzzle the
+      // generator produces.
+      const logicOnly = SudokuSolver(allowGuessing: false);
+      for (final difficulty in Difficulty.values) {
+        for (var seed = 0; seed < seeds; seed++) {
+          final puzzle = SudokuGenerator(seed).generate(difficulty);
+          expect(logicOnly.solve(puzzle.givens), isA<Solved>(),
+              reason: '$difficulty seed $seed needs trial and error');
+          expect(puzzle.rating.hardestTechnique, isNot(Technique.guess));
+          expect(const SudokuSolver().nextHint(puzzle.givens), isNotNull);
+        }
+      }
+    });
+
     test('is rated consistently by the solver', () {
       for (var seed = 0; seed < seeds; seed++) {
         final puzzle = SudokuGenerator(seed).generate(Difficulty.hard);

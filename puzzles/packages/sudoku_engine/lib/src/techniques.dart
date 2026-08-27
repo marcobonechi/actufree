@@ -20,10 +20,14 @@ final List<({Technique technique, DeductionFinder find})> orderedFinders =
   (technique: Technique.nakedPair, find: findNakedPair),
   (technique: Technique.hiddenPair, find: findHiddenPair),
   (technique: Technique.nakedTriple, find: findNakedTriple),
+  (technique: Technique.hiddenTriple, find: findHiddenTriple),
   (technique: Technique.pointingPair, find: findPointingPair),
   (technique: Technique.boxLineReduction, find: findBoxLineReduction),
   (technique: Technique.xWing, find: findXWing),
   (technique: Technique.yWing, find: findYWing),
+  (technique: Technique.xyzWing, find: findXyzWing),
+  (technique: Technique.swordfish, find: findSwordfish),
+  (technique: Technique.simpleColouring, find: findSimpleColouring),
 ];
 
 /// A cell with exactly one candidate left.
@@ -300,6 +304,229 @@ Deduction? findYWing(CandidateGrid grid) {
           because: <int>{pivot, left, right},
           eliminations: eliminations,
         );
+      }
+    }
+  }
+  return null;
+}
+
+/// Three digits confined to the same three cells of a unit.
+Deduction? findHiddenTriple(CandidateGrid grid) {
+  for (var unit = 0; unit < unitCount; unit++) {
+    final spots = <int, List<int>>{};
+    for (var digit = 1; digit <= boardSize; digit++) {
+      final places = grid.spotsFor(unit, digit);
+      if (places.length >= 2 && places.length <= 3) spots[digit] = places;
+    }
+    if (spots.length < 3) continue;
+    for (final combination in _combinations(spots.keys.toList(), 3)) {
+      final cells = <int>{};
+      var keep = 0;
+      for (final digit in combination) {
+        cells.addAll(spots[digit]!);
+        keep |= maskOf(digit);
+      }
+      if (cells.length != 3) continue;
+      final eliminations = <int, int>{};
+      for (final index in cells) {
+        final extra = grid.candidates[index] & ~keep;
+        if (extra != 0) eliminations[index] = extra;
+      }
+      if (eliminations.isEmpty) continue;
+      return Deduction.elimination(
+        technique: Technique.hiddenTriple,
+        explanation: 'In ${unitName(unit)}, ${combination.join(', ')} fit only '
+            'in ${cellNames(cells)}, so those three cells hold nothing else.',
+        because: cells,
+        eliminations: eliminations,
+      );
+    }
+  }
+  return null;
+}
+
+/// A three-candidate pivot whose two pincers share one of its digits.
+Deduction? findXyzWing(CandidateGrid grid) {
+  for (var pivot = 0; pivot < cellCount; pivot++) {
+    if (grid.values[pivot] != 0) continue;
+    if (countOf(grid.candidates[pivot]) != 3) continue;
+    final pivotMask = grid.candidates[pivot];
+    for (final left in cellPeers[pivot]) {
+      if (grid.values[left] != 0) continue;
+      if (countOf(grid.candidates[left]) != 2) continue;
+      if (grid.candidates[left] & pivotMask != grid.candidates[left]) continue;
+      for (final right in cellPeers[pivot]) {
+        if (right <= left) continue;
+        if (grid.values[right] != 0) continue;
+        if (countOf(grid.candidates[right]) != 2) continue;
+        if (grid.candidates[right] & pivotMask != grid.candidates[right]) {
+          continue;
+        }
+        if ((grid.candidates[left] | grid.candidates[right]) != pivotMask) {
+          continue;
+        }
+        final shared = grid.candidates[left] & grid.candidates[right];
+        if (countOf(shared) != 1) continue;
+        final digit = soleDigitOf(shared);
+        final eliminations = <int, int>{};
+        // Only cells seeing all three corners are ruled out: one of the three
+        // must take the digit, but which one is not yet known.
+        for (final index in cellPeers[pivot]) {
+          if (index == left || index == right) continue;
+          if (!cellPeers[left].contains(index)) continue;
+          if (!cellPeers[right].contains(index)) continue;
+          if (grid.isOpen(index, digit)) eliminations[index] = maskOf(digit);
+        }
+        if (eliminations.isEmpty) continue;
+        return Deduction.elimination(
+          technique: Technique.xyzWing,
+          explanation: 'One of ${cellName(pivot)}, ${cellName(left)} or '
+              '${cellName(right)} must be $digit, so $digit is out anywhere '
+              'all three can see.',
+          because: <int>{pivot, left, right},
+          eliminations: eliminations,
+        );
+      }
+    }
+  }
+  return null;
+}
+
+/// A digit confined to the same three columns across three rows, or the
+/// reverse — the three-line form of an X-wing.
+Deduction? findSwordfish(CandidateGrid grid) {
+  for (var digit = 1; digit <= boardSize; digit++) {
+    for (var transposed = 0; transposed < 2; transposed++) {
+      final lineOffset = transposed == 0 ? 0 : boardSize;
+      final byLine = <int, List<int>>{};
+      for (var line = 0; line < boardSize; line++) {
+        final spots = grid.spotsFor(lineOffset + line, digit);
+        if (spots.length < 2 || spots.length > boxSize) continue;
+        byLine[line] = spots
+            .map((int index) =>
+                transposed == 0 ? index % boardSize : index ~/ boardSize)
+            .toList();
+      }
+      if (byLine.length < boxSize) continue;
+      for (final combination in _combinations(byLine.keys.toList(), boxSize)) {
+        final crosses = <int>{};
+        for (final line in combination) {
+          crosses.addAll(byLine[line]!);
+        }
+        if (crosses.length != boxSize) continue;
+        final corners = <int>{};
+        for (final line in combination) {
+          for (final cross in byLine[line]!) {
+            corners.add(transposed == 0
+                ? line * boardSize + cross
+                : cross * boardSize + line);
+          }
+        }
+        final eliminations = <int, int>{};
+        for (final cross in crosses) {
+          final crossUnit = transposed == 0 ? boardSize + cross : cross;
+          for (final index in unitCells[crossUnit]) {
+            if (corners.contains(index)) continue;
+            if (grid.isOpen(index, digit)) {
+              eliminations[index] = maskOf(digit);
+            }
+          }
+        }
+        if (eliminations.isEmpty) continue;
+        final lineWord = transposed == 0 ? 'rows' : 'columns';
+        final crossWord = transposed == 0 ? 'columns' : 'rows';
+        return Deduction.elimination(
+          technique: Technique.swordfish,
+          explanation: 'Across $lineWord '
+              '${combination.map((int l) => l + 1).join(', ')}, $digit fits '
+              'only in $crossWord '
+              '${crosses.map((int c) => c + 1).join(', ')}. Those three '
+              '$crossWord are used up, so $digit goes nowhere else in them.',
+          because: corners,
+          eliminations: eliminations,
+        );
+      }
+    }
+  }
+  return null;
+}
+
+/// Two-colours a digit's conjugate-pair chains and reads off the
+/// contradictions.
+Deduction? findSimpleColouring(CandidateGrid grid) {
+  for (var digit = 1; digit <= boardSize; digit++) {
+    // An edge joins the only two cells of a unit that can still take the
+    // digit: exactly one of them holds it, so the two always disagree.
+    final links = <int, List<int>>{};
+    for (var unit = 0; unit < unitCount; unit++) {
+      final spots = grid.spotsFor(unit, digit);
+      if (spots.length != 2) continue;
+      links.putIfAbsent(spots[0], () => <int>[]).add(spots[1]);
+      links.putIfAbsent(spots[1], () => <int>[]).add(spots[0]);
+    }
+    final seen = <int>{};
+    for (final start in links.keys) {
+      if (seen.contains(start)) continue;
+      final first = <int>{start};
+      final second = <int>{};
+      final queue = <int>[start];
+      seen.add(start);
+      while (queue.isNotEmpty) {
+        final current = queue.removeAt(0);
+        final target = first.contains(current) ? second : first;
+        for (final next in links[current]!) {
+          if (!seen.add(next)) continue;
+          target.add(next);
+          queue.add(next);
+        }
+      }
+      // A colour appearing twice in one unit cannot be the true colour.
+      for (final colour in <Set<int>>[first, second]) {
+        final clash = _sameUnitPair(colour);
+        if (clash == null) continue;
+        return Deduction.elimination(
+          technique: Technique.simpleColouring,
+          explanation: 'Chaining $digit through its forced pairs puts '
+              '${cellName(clash[0])} and ${cellName(clash[1])} on the same '
+              'side, but they share a unit. That whole side is impossible, so '
+              '$digit leaves ${cellNames(colour)}.',
+          because: colour,
+          eliminations: <int, int>{
+            for (final index in colour) index: maskOf(digit),
+          },
+        );
+      }
+      // One side is true, so a cell seeing both sides cannot hold the digit.
+      final eliminations = <int, int>{};
+      for (var index = 0; index < cellCount; index++) {
+        if (!grid.isOpen(index, digit)) continue;
+        if (first.contains(index) || second.contains(index)) continue;
+        final peers = cellPeers[index];
+        if (!first.any(peers.contains)) continue;
+        if (!second.any(peers.contains)) continue;
+        eliminations[index] = maskOf(digit);
+      }
+      if (eliminations.isEmpty) continue;
+      return Deduction.elimination(
+        technique: Technique.simpleColouring,
+        explanation: 'Chaining $digit through its forced pairs splits them '
+            'into two sides, one of which is true. ${cellNames(
+          eliminations.keys,
+        )} can see both sides, so $digit is out there.',
+        because: <int>{...first, ...second},
+        eliminations: eliminations,
+      );
+    }
+  }
+  return null;
+}
+
+List<int>? _sameUnitPair(Set<int> group) {
+  final members = group.toList()..sort();
+  for (var i = 0; i < members.length; i++) {
+    for (var j = i + 1; j < members.length; j++) {
+      if (cellPeers[members[i]].contains(members[j])) {
+        return <int>[members[i], members[j]];
       }
     }
   }
