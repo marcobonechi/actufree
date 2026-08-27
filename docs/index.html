@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actufree</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #1a1c1e; --muted: #5f6b76; --bg: #f7f8fc;
+    --card: #ffffff; --line: #e2e6ec; --accent: #6d28d9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6e8ec; --muted: #9aa5b1; --bg: #101319;
+      --card: #171b22; --line: #262c36; --accent: #a78bfa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 4rem 1.25rem; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 34rem; margin: 0 auto; text-align: center; }
+  .mark {
+    width: 108px; height: 108px; margin: 0 auto 1.5rem; border-radius: 24px;
+    background: linear-gradient(135deg, #7c3aed, #4c1d95);
+    display: grid; place-items: center;
+  }
+  .mark svg { width: 72px; height: 72px; }
+  h1 { font-size: 2.4rem; margin: 0 0 .35rem; letter-spacing: -.03em; }
+  p.tag { color: var(--muted); font-size: 1.1rem; margin: 0 0 2.5rem; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 1.5rem; text-align: left; margin-bottom: 1rem;
+  }
+  h2 { font-size: 1rem; margin: 0 0 .6rem; }
+  ul { margin: 0; padding-left: 1.2rem; color: var(--muted); }
+  li { margin: .3rem 0; }
+  a { color: var(--accent); }
+  footer { margin-top: 2rem; color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark">
+    <svg viewBox="0 0 1 1" aria-label="Actufree">
+      <g stroke="#9ff0e0" stroke-width="0.092" stroke-linecap="round" fill="none">
+        <line x1="0.140" y1="0.830" x2="0.380" y2="0.170"/>
+        <line x1="0.380" y1="0.170" x2="0.620" y2="0.830"/>
+        <line x1="0.4345" y1="0.320" x2="0.880" y2="0.320"/>
+        <line x1="0.2309" y1="0.580" x2="0.800" y2="0.580"/>
+      </g>
+    </svg>
+  </div>
+  <h1>Actufree</h1>
+  <p class="tag">Free puzzles. No ads, no accounts, nothing collected.</p>
+
+  <div class="card">
+    <h2>Sudoku</h2>
+    <ul>
+      <li>Four difficulties, from puzzles that flow to ones that need a colouring chain.</li>
+      <li>Every puzzle has exactly one solution, and none of them require a guess.</li>
+      <li>Hints name the technique and explain the reasoning in a sentence.</li>
+      <li>Pencil marks, mistake highlighting, and your game saved per difficulty.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Privacy</h2>
+    <ul>
+      <li>No analytics, no advertising, no trackers, no third-party SDKs.</li>
+      <li>The Android build does not even request network permission.</li>
+      <li><a href="privacy.html">Read the privacy policy</a></li>
+    </ul>
+  </div>
+
+  <footer>© 2026 Sidevibe</footer>
+</main>
+</body>
+</html>
