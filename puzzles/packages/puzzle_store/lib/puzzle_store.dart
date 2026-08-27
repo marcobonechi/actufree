@@ -5,5 +5,6 @@
 /// route to a Flutter import.
 library;
 
+export 'src/best_scores.dart';
 export 'src/game_store.dart';
 export 'src/saved_game.dart';
