@@ -25,6 +25,7 @@ sealed class MoveResult {
 
 /// The move is legal. [board] is the board with the move applied.
 final class MoveAccepted extends MoveResult {
+  /// Creates an accepted result.
   const MoveAccepted(this.board);
 
   /// The resulting board.
@@ -33,6 +34,7 @@ final class MoveAccepted extends MoveResult {
 
 /// The move is not legal and was not applied.
 final class MoveRejected extends MoveResult {
+  /// Creates a rejected result.
   const MoveRejected(this.reason, this.culprits);
 
   /// Why the move was refused.
@@ -60,6 +62,21 @@ final class MoveValidator {
   ///
   /// A `null` [digit] clears the cell and is always allowed unless the cell is
   /// a given.
-  MoveResult apply(SudokuBoard board, Cell cell, int? digit) =>
-      throw UnimplementedError();
+  MoveResult apply(SudokuBoard board, Cell cell, int? digit) {
+    if (board.isGiven(cell)) {
+      return const MoveRejected(MoveRejection.cellIsGiven, <Cell>{});
+    }
+    if (digit == null) return MoveAccepted(board.withValue(cell, null));
+    if (digit < 1 || digit > boardSize) {
+      return const MoveRejected(MoveRejection.digitOutOfRange, <Cell>{});
+    }
+    final culprits = <Cell>{};
+    for (final peer in cell.peers) {
+      if (board.valueAt(peer) == digit) culprits.add(peer);
+    }
+    if (strict && culprits.isNotEmpty) {
+      return MoveRejected(MoveRejection.conflictsWithPeer, culprits);
+    }
+    return MoveAccepted(board.withValue(cell, digit));
+  }
 }
