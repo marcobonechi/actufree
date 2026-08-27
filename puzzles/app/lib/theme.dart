@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:puzzle_kit/puzzle_kit.dart';
 
 /// Colours the Sudoku board needs that a [ColorScheme] has no name for.
 ///
@@ -6,8 +7,9 @@ import 'package:flutter/material.dart';
 /// under the common forms of colour blindness — so a conflict never reads as
 /// "the red one" and a player entry never reads as "the green one".
 ///
-/// This lives in the app for now. It moves to `puzzle_kit` once a second game
-/// needs it.
+/// This stays in the app: the colours a Sudoku board needs — a clue, a player
+/// entry, a conflict — are not the colours Block Blast will need, so the
+/// shared layer supplies the theme and each game supplies its own palette.
 @immutable
 class SudokuPalette extends ThemeExtension<SudokuPalette> {
   /// Creates a palette.
@@ -131,17 +133,13 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
 SudokuPalette paletteOf(BuildContext context) =>
     Theme.of(context).extension<SudokuPalette>() ?? SudokuPalette.light;
 
-/// Builds the app theme for [brightness].
-ThemeData buildTheme(Brightness brightness) {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF0072B2),
-    brightness: brightness,
-  );
-  return ThemeData(
-    colorScheme: scheme,
-    useMaterial3: true,
-    extensions: <ThemeExtension<dynamic>>[
-      brightness == Brightness.dark ? SudokuPalette.dark : SudokuPalette.light,
-    ],
-  );
-}
+/// The Actufree theme for [brightness]: the shared scaffolding plus Sudoku's
+/// board colours.
+ThemeData actufreeTheme(Brightness brightness) => buildTheme(
+      brightness: brightness,
+      extensions: <ThemeExtension<dynamic>>[
+        brightness == Brightness.dark
+            ? SudokuPalette.dark
+            : SudokuPalette.light,
+      ],
+    );

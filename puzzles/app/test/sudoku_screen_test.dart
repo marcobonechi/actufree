@@ -16,7 +16,7 @@ void main() {
       Cell.all.firstWhere((Cell cell) => puzzle.givens.valueAt(cell) != null);
 
   Widget host() => MaterialApp(
-        theme: buildTheme(Brightness.light),
+        theme: actufreeTheme(Brightness.light),
         home: SudokuScreen(puzzle: puzzle),
       );
 
@@ -214,7 +214,7 @@ void main() {
         (tester) async {
       final store = GameStore(MemoryStore());
       await tester.pumpWidget(MaterialApp(
-        theme: buildTheme(Brightness.light),
+        theme: actufreeTheme(Brightness.light),
         home: SudokuScreen(puzzle: puzzle, store: store),
       ));
       await enter(tester, firstEmpty, puzzle.solution.valueAt(firstEmpty)!);
@@ -245,7 +245,7 @@ void main() {
           .withValue(wrongCell, wrongDigit);
 
       await tester.pumpWidget(MaterialApp(
-        theme: buildTheme(Brightness.light),
+        theme: actufreeTheme(Brightness.light),
         home: SudokuScreen(puzzle: puzzle, resumeFrom: resumed),
       ));
       final handle = tester.ensureSemantics();
@@ -264,7 +264,7 @@ void main() {
     testWidgets('finishing the puzzle clears the slot', (tester) async {
       final store = GameStore(MemoryStore());
       await tester.pumpWidget(MaterialApp(
-        theme: buildTheme(Brightness.light),
+        theme: actufreeTheme(Brightness.light),
         home: SudokuScreen(puzzle: puzzle, store: store),
       ));
       for (final cell in Cell.all) {
