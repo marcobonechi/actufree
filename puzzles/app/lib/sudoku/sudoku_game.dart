@@ -25,9 +25,11 @@ class SudokuGame extends ChangeNotifier {
   SudokuGame(this.puzzle, {SudokuBoard? board})
       : _board = board ?? puzzle.givens,
         _conflicts = const <Cell>{} {
-    // Resuming means conflicts and mistakes must be worked out before the
-    // first frame, not on the first move.
-    _commit(_board);
+    // Resuming means conflicts, mistakes and which units are already finished
+    // must be worked out before the first frame, not on the first move. Units
+    // already complete in a resumed game are recorded, not announced: the
+    // player finished them last time and does not need congratulating again.
+    _apply(_board, announce: false);
   }
 
   static const SudokuSolver _solver = SudokuSolver();
@@ -42,6 +44,9 @@ class SudokuGame extends ChangeNotifier {
   Cell? _selected;
   bool _noteMode = false;
   Set<Cell> _highlighted = const <Cell>{};
+  Set<int> _completeUnits = const <int>{};
+  Set<Cell> _justCompleted = const <Cell>{};
+  int _completionTick = 0;
 
   /// The board as it stands.
   SudokuBoard get board => _board;
@@ -64,6 +69,15 @@ class SudokuGame extends ChangeNotifier {
 
   /// Cells the last hint pointed at, for highlighting.
   Set<Cell> get highlighted => _highlighted;
+
+  /// The cells of every row, column or box finished by the most recent move.
+  Set<Cell> get justCompleted => _justCompleted;
+
+  /// Counts completions, so the board can tell a fresh one from a rebuild.
+  ///
+  /// [justCompleted] alone is not enough: finishing the same-shaped unit twice
+  /// in a row would produce an equal set and the animation would not replay.
+  int get completionTick => _completionTick;
 
   /// Whether [cell] should be drawn as wrong: a mistaken entry, or a clue
   /// caught up in a clash with one.
@@ -180,7 +194,9 @@ class SudokuGame extends ChangeNotifier {
     return HintResult(hint.explanation, label: hint.technique.label);
   }
 
-  void _commit(SudokuBoard next) {
+  void _commit(SudokuBoard next) => _apply(next, announce: true);
+
+  void _apply(SudokuBoard next, {required bool announce}) {
     _board = next;
     _conflicts = next.conflicts;
     _mistakes = <Cell>{
@@ -190,7 +206,33 @@ class SudokuGame extends ChangeNotifier {
             next.valueAt(cell) != puzzle.solution.valueAt(cell))
           cell,
     };
+    final complete = <int>{};
+    for (var unit = 0; unit < allUnits.length; unit++) {
+      if (_isUnitComplete(next, allUnits[unit])) complete.add(unit);
+    }
+    final finished = complete.difference(_completeUnits);
+    _completeUnits = complete;
+    if (announce && finished.isNotEmpty) {
+      _justCompleted = <Cell>{
+        for (final unit in finished) ...allUnits[unit],
+      };
+      _completionTick++;
+    } else {
+      _justCompleted = const <Cell>{};
+    }
     _highlighted = const <Cell>{};
     notifyListeners();
+  }
+
+  /// A unit counts as done only when it is right: nine cells, nine different
+  /// digits. Filling a row with a repeat is not an achievement.
+  static bool _isUnitComplete(SudokuBoard board, List<Cell> unit) {
+    final seen = <int>{};
+    for (final cell in unit) {
+      final value = board.valueAt(cell);
+      if (value == null) return false;
+      seen.add(value);
+    }
+    return seen.length == boardSize;
   }
 }

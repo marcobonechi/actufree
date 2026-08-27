@@ -9,7 +9,7 @@ import 'sudoku_game.dart';
 /// Written directly rather than on top of a shared grid widget: the region
 /// borders, peer highlighting and pencil marks are specific enough to Sudoku
 /// that an abstraction would fight them.
-class SudokuBoardView extends StatelessWidget {
+class SudokuBoardView extends StatefulWidget {
   /// Draws [game]'s board.
   const SudokuBoardView({required this.game, super.key});
 
@@ -17,7 +17,44 @@ class SudokuBoardView extends StatelessWidget {
   final SudokuGame game;
 
   @override
+  State<SudokuBoardView> createState() => _SudokuBoardViewState();
+}
+
+class _SudokuBoardViewState extends State<SudokuBoardView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _celebration = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 780),
+  )..addStatusListener(_onCelebrationDone);
+  late int _seenTick = widget.game.completionTick;
+  Set<Cell> _celebrating = const <Cell>{};
+
+  @override
+  void didUpdateWidget(covariant SudokuBoardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The game notifies on every move, so the tick is what distinguishes a
+    // fresh completion from an ordinary rebuild.
+    final tick = widget.game.completionTick;
+    if (tick == _seenTick) return;
+    _seenTick = tick;
+    _celebrating = widget.game.justCompleted;
+    _celebration.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _celebration.dispose();
+    super.dispose();
+  }
+
+  void _onCelebrationDone(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) return;
+    setState(() => _celebrating = const <Cell>{});
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final game = widget.game;
     final palette = paletteOf(context);
     return AspectRatio(
       aspectRatio: 1,
@@ -46,6 +83,21 @@ class SudokuBoardView extends StatelessWidget {
                     ),
                 ],
               ),
+              if (_celebrating.isNotEmpty)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _celebration,
+                      builder: (BuildContext context, _) => CustomPaint(
+                        painter: _CompletionPainter(
+                          cells: _celebrating,
+                          progress: _celebration.value,
+                          colour: palette.completed,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(painter: _GridLinePainter(palette)),
@@ -182,6 +234,52 @@ class _Notes extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Flashes over a row, column or box that has just been completed.
+///
+/// Painted above the cells but below the grid lines, so the board's structure
+/// stays legible while the flash passes over it.
+class _CompletionPainter extends CustomPainter {
+  const _CompletionPainter({
+    required this.cells,
+    required this.progress,
+    required this.colour,
+  });
+
+  final Set<Cell> cells;
+  final double progress;
+  final Color colour;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress <= 0 || progress >= 1) return;
+    final step = size.width / boardSize;
+    for (final cell in cells) {
+      // Staggering along the diagonal makes the flash sweep along a row, down
+      // a column, or across a box, rather than blinking all at once.
+      final delay = ((cell.row + cell.col) % boardSize) * 0.045;
+      final local = (progress - delay) / 0.6;
+      final strength = _envelope(local);
+      if (strength <= 0) continue;
+      canvas.drawRect(
+        Rect.fromLTWH(cell.col * step, cell.row * step, step, step),
+        Paint()..color = colour.withValues(alpha: strength * 0.5),
+      );
+    }
+  }
+
+  /// Rises quickly, falls away slowly.
+  static double _envelope(double t) {
+    if (t <= 0 || t >= 1) return 0;
+    return t < 0.3 ? t / 0.3 : (1 - t) / 0.7;
+  }
+
+  @override
+  bool shouldRepaint(_CompletionPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.colour != colour ||
+      oldDelegate.cells != cells;
 }
 
 class _GridLinePainter extends CustomPainter {

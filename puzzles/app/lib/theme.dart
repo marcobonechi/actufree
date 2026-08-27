@@ -24,6 +24,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
     required this.note,
     required this.gridLine,
     required this.boxLine,
+    required this.completed,
   });
 
   /// The light-mode palette.
@@ -38,6 +39,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
     note: Color(0xFF5F6B76),
     gridLine: Color(0xFFC9D1D9),
     boxLine: Color(0xFF44505C),
+    completed: Color(0xFF009E73),
   );
 
   /// The dark-mode palette.
@@ -52,6 +54,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
     note: Color(0xFF97A3AF),
     gridLine: Color(0xFF333C45),
     boxLine: Color(0xFF8A97A4),
+    completed: Color(0xFF4FD1A5),
   );
 
   /// A clue the player may not change.
@@ -84,6 +87,13 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
   /// The heavier line between boxes.
   final Color boxLine;
 
+  /// The flash over a row, column or box that has just been completed.
+  ///
+  /// A bluish green from the same colourblind-safe family as the rest: it
+  /// reads as distinct from both the blue of a player entry and the vermillion
+  /// of a mistake under the common forms of colour blindness.
+  final Color completed;
+
   @override
   SudokuPalette copyWith({
     Color? given,
@@ -96,6 +106,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
     Color? note,
     Color? gridLine,
     Color? boxLine,
+    Color? completed,
   }) {
     return SudokuPalette(
       given: given ?? this.given,
@@ -108,6 +119,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
       note: note ?? this.note,
       gridLine: gridLine ?? this.gridLine,
       boxLine: boxLine ?? this.boxLine,
+      completed: completed ?? this.completed,
     );
   }
 
@@ -125,6 +137,7 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
       note: Color.lerp(note, other.note, t)!,
       gridLine: Color.lerp(gridLine, other.gridLine, t)!,
       boxLine: Color.lerp(boxLine, other.boxLine, t)!,
+      completed: Color.lerp(completed, other.completed, t)!,
     );
   }
 }
