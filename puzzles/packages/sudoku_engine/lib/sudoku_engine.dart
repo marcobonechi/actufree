@@ -13,4 +13,5 @@ export 'src/move.dart';
 export 'src/puzzle.dart';
 export 'src/solver.dart';
 export 'src/sudoku_board.dart';
+export 'src/sudoku_save.dart';
 export 'src/technique.dart';

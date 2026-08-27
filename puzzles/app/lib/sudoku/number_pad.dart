@@ -27,20 +27,6 @@ class NumberPad extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: _Tool(
-                  icon: Icons.undo,
-                  label: 'Undo',
-                  onPressed: game.canUndo ? game.undo : null,
-                ),
-              ),
-              Expanded(
-                child: _Tool(
-                  icon: Icons.redo,
-                  label: 'Redo',
-                  onPressed: game.canRedo ? game.redo : null,
-                ),
-              ),
-              Expanded(
-                child: _Tool(
                   icon: Icons.backspace_outlined,
                   label: 'Erase',
                   onPressed: game.selected == null ? null : game.erase,

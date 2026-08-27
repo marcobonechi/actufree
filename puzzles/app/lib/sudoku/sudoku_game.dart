@@ -14,17 +14,21 @@ class HintResult {
   final String? label;
 }
 
-/// One game in progress: the board, the selection, and the undo history.
+/// One game in progress: the board and the selection.
 ///
-/// Undo is a stack of whole boards rather than a stack of commands. Boards are
-/// immutable and small, so keeping old values is cheaper than describing how
-/// to reverse each edit. The generic command stack the shared layer wants can
-/// be built on this once a second game needs one.
+/// There is no undo. Every edit here writes one cell, and Erase already
+/// reverses any of them, so a history would be weight without a use. Block
+/// Blast will be a different question — placing a shape writes many cells and
+/// clears lines, which is not reversible by hand.
 class SudokuGame extends ChangeNotifier {
-  /// Starts a game on [puzzle].
-  SudokuGame(this.puzzle)
-      : _board = puzzle.givens,
-        _conflicts = const <Cell>{};
+  /// Starts a game on [puzzle], optionally resuming from [board].
+  SudokuGame(this.puzzle, {SudokuBoard? board})
+      : _board = board ?? puzzle.givens,
+        _conflicts = const <Cell>{} {
+    // Resuming means conflicts and mistakes must be worked out before the
+    // first frame, not on the first move.
+    _commit(_board);
+  }
 
   static const SudokuSolver _solver = SudokuSolver();
   static const MoveValidator _validator = MoveValidator();
@@ -34,8 +38,7 @@ class SudokuGame extends ChangeNotifier {
 
   SudokuBoard _board;
   Set<Cell> _conflicts;
-  final List<SudokuBoard> _past = <SudokuBoard>[];
-  final List<SudokuBoard> _future = <SudokuBoard>[];
+  Set<Cell> _mistakes = const <Cell>{};
   Cell? _selected;
   bool _noteMode = false;
   Set<Cell> _highlighted = const <Cell>{};
@@ -52,14 +55,20 @@ class SudokuGame extends ChangeNotifier {
   /// Cells whose digit duplicates a peer's.
   Set<Cell> get conflicts => _conflicts;
 
+  /// Player entries that disagree with the solution.
+  ///
+  /// Always shown on the board. A wrong digit that happens not to clash with
+  /// anything would otherwise sit there unnoticed until the puzzle had
+  /// quietly become unsolvable.
+  Set<Cell> get mistakes => _mistakes;
+
   /// Cells the last hint pointed at, for highlighting.
   Set<Cell> get highlighted => _highlighted;
 
-  /// Whether there is anything to undo.
-  bool get canUndo => _past.isNotEmpty;
-
-  /// Whether there is anything to redo.
-  bool get canRedo => _future.isNotEmpty;
+  /// Whether [cell] should be drawn as wrong: a mistaken entry, or a clue
+  /// caught up in a clash with one.
+  bool isWrong(Cell cell) =>
+      _mistakes.contains(cell) || _conflicts.contains(cell);
 
   /// Whether the puzzle is finished and correct.
   bool get isSolved => _board.isSolved;
@@ -74,15 +83,7 @@ class SudokuGame extends ChangeNotifier {
   }
 
   /// The first player entry that disagrees with the solution, if any.
-  Cell? get firstMistake {
-    for (final cell in Cell.all) {
-      if (_board.isGiven(cell)) continue;
-      final value = _board.valueAt(cell);
-      if (value == null) continue;
-      if (value != puzzle.solution.valueAt(cell)) return cell;
-    }
-    return null;
-  }
+  Cell? get firstMistake => _mistakes.isEmpty ? null : _mistakes.first;
 
   /// Selects [cell].
   void select(Cell cell) {
@@ -126,20 +127,6 @@ class SudokuGame extends ChangeNotifier {
     if (_board.notesAt(cell).isNotEmpty) {
       _commit(_board.withNotesCleared(cell));
     }
-  }
-
-  /// Steps back one move.
-  void undo() {
-    if (_past.isEmpty) return;
-    _future.add(_board);
-    _replace(_past.removeLast());
-  }
-
-  /// Steps forward one undone move.
-  void redo() {
-    if (_future.isEmpty) return;
-    _past.add(_board);
-    _replace(_future.removeLast());
   }
 
   /// Clears every entry and note, keeping the clues.
@@ -194,14 +181,15 @@ class SudokuGame extends ChangeNotifier {
   }
 
   void _commit(SudokuBoard next) {
-    _past.add(_board);
-    _future.clear();
-    _replace(next);
-  }
-
-  void _replace(SudokuBoard next) {
     _board = next;
     _conflicts = next.conflicts;
+    _mistakes = <Cell>{
+      for (final cell in Cell.all)
+        if (!next.isGiven(cell) &&
+            next.valueAt(cell) != null &&
+            next.valueAt(cell) != puzzle.solution.valueAt(cell))
+          cell,
+    };
     _highlighted = const <Cell>{};
     notifyListeners();
   }

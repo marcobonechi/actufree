@@ -1,5 +1,6 @@
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+/// The shared Flutter layer for the Actufree games.
+library;
+
+export 'package:puzzle_store/puzzle_store.dart';
+
+export 'src/preferences_store.dart';

@@ -1,4 +1,4 @@
-package com.actufree.puzzles_app
+package ai.sidevibe.actufree
 
 import io.flutter.embedding.android.FlutterActivity
 

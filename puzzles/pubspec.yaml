@@ -8,4 +8,5 @@ environment:
 workspace:
   - app
   - packages/puzzle_kit
+  - packages/puzzle_store
   - packages/sudoku_engine

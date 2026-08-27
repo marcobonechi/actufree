@@ -12,6 +12,9 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  puzzle_store:
+    path: ../puzzle_store
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:

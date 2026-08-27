@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:puzzle_kit/puzzle_kit.dart';
 import 'package:puzzles_app/sudoku/board_view.dart';
 import 'package:puzzles_app/sudoku/sudoku_screen.dart';
 import 'package:puzzles_app/theme.dart';
@@ -89,18 +90,46 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('undo and redo walk the history', (tester) async {
+  testWidgets('there is no undo to reach for', (tester) async {
     await tester.pumpWidget(host());
-    final handle = tester.ensureSemantics();
+    expect(tool('Undo'), findsNothing);
+    expect(tool('Redo'), findsNothing);
+    expect(tool('Erase'), findsOneWidget);
+  });
+
+  testWidgets('a wrong entry is flagged on the board straight away',
+      (tester) async {
+    await tester.pumpWidget(host());
     final answer = puzzle.solution.valueAt(firstEmpty)!;
-    await enter(tester, firstEmpty, answer);
-    await tester.tap(tool('Undo'));
-    await tester.pump();
-    expect(tester.getSemantics(cellAt(firstEmpty)).value, 'empty');
-    await tester.tap(tool('Redo'));
-    await tester.pump();
-    expect(tester.getSemantics(cellAt(firstEmpty)).value, '$answer');
-    handle.dispose();
+    final wrong = answer == 9 ? 1 : answer + 1;
+    // Picks a wrong digit that does not clash with any peer, so the flag can
+    // only come from comparing against the solution.
+    final quiet = Cell.all.firstWhere(
+      (Cell cell) =>
+          puzzle.givens.valueAt(cell) == null &&
+          puzzle.givens.legalDigitsAt(cell).length > 1,
+      orElse: () => firstEmpty,
+    );
+    final quietAnswer = puzzle.solution.valueAt(quiet)!;
+    final quietWrong = puzzle.givens
+        .legalDigitsAt(quiet)
+        .firstWhere((int digit) => digit != quietAnswer);
+
+    await enter(tester, quiet, quietWrong);
+    final state = tester.state<State<SudokuScreen>>(find.byType(SudokuScreen));
+    expect(state.mounted, isTrue);
+    expect(find.byType(SudokuBoardView), findsOneWidget);
+
+    // The flagged digit renders in the conflict colour even with no clash.
+    final palette = SudokuPalette.light;
+    final text = tester.widget<Text>(
+      find.descendant(of: cellAt(quiet), matching: find.byType(Text)),
+    );
+    expect(text.data, '$quietWrong');
+    expect(text.style?.color, palette.conflict);
+    expect(puzzle.givens.isLegal(quiet, quietWrong), isTrue,
+        reason: 'the wrong digit should not clash, or the test proves nothing');
+    expect(wrong, isNot(answer));
   });
 
   testWidgets('erase clears the selected cell', (tester) async {
@@ -177,6 +206,74 @@ void main() {
         expect(digitKey(digit), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('save and resume', () {
+    testWidgets('a game in progress is written to its difficulty slot',
+        (tester) async {
+      final store = GameStore(MemoryStore());
+      await tester.pumpWidget(MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: SudokuScreen(puzzle: puzzle, store: store),
+      ));
+      await enter(tester, firstEmpty, puzzle.solution.valueAt(firstEmpty)!);
+      await tester.pumpAndSettle();
+
+      final saved = await store.load(
+        'sudoku',
+        SudokuSave.fromJson,
+        slot: puzzle.difficulty.name,
+      );
+      expect(saved, isNotNull);
+      expect(saved!.board.valueAt(firstEmpty),
+          puzzle.solution.valueAt(firstEmpty));
+      expect(await store.has('sudoku', slot: Difficulty.expert.name), isFalse,
+          reason: 'other difficulties keep their own slot');
+    });
+
+    testWidgets('resuming restores entries, notes and mistake flags',
+        (tester) async {
+      final wrongCell = Cell.all.lastWhere(
+        (Cell cell) => puzzle.givens.valueAt(cell) == null,
+      );
+      final wrongDigit = puzzle.givens
+          .legalDigitsAt(wrongCell)
+          .firstWhere((int d) => d != puzzle.solution.valueAt(wrongCell));
+      final resumed = puzzle.givens
+          .withValue(firstEmpty, puzzle.solution.valueAt(firstEmpty)!)
+          .withValue(wrongCell, wrongDigit);
+
+      await tester.pumpWidget(MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: SudokuScreen(puzzle: puzzle, resumeFrom: resumed),
+      ));
+      final handle = tester.ensureSemantics();
+      expect(tester.getSemantics(cellAt(firstEmpty)).value,
+          '${puzzle.solution.valueAt(firstEmpty)}');
+
+      // The mistake carried in from storage is flagged on the first frame,
+      // not only after the next move.
+      final text = tester.widget<Text>(
+        find.descendant(of: cellAt(wrongCell), matching: find.byType(Text)),
+      );
+      expect(text.style?.color, SudokuPalette.light.conflict);
+      handle.dispose();
+    });
+
+    testWidgets('finishing the puzzle clears the slot', (tester) async {
+      final store = GameStore(MemoryStore());
+      await tester.pumpWidget(MaterialApp(
+        theme: buildTheme(Brightness.light),
+        home: SudokuScreen(puzzle: puzzle, store: store),
+      ));
+      for (final cell in Cell.all) {
+        if (puzzle.givens.valueAt(cell) != null) continue;
+        await enter(tester, cell, puzzle.solution.valueAt(cell)!);
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('Solved'), findsOneWidget);
+      expect(await store.has('sudoku', slot: puzzle.difficulty.name), isFalse);
     });
   });
 }

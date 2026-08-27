@@ -1,36 +1,17 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:sudoku_engine/sudoku_engine.dart';
+import 'package:puzzle_kit/puzzle_kit.dart';
 
-import 'sudoku/puzzle_loader.dart';
-import 'sudoku/sudoku_screen.dart';
+import 'sudoku/difficulty_screen.dart';
 
-/// The menu. Sudoku is the only game so far.
-class HomeScreen extends StatefulWidget {
+/// The Actufree menu: pick a game.
+///
+/// Sudoku is the only one so far. The list is the seam Block Blast slots into.
+class HomeScreen extends StatelessWidget {
   /// Creates the menu.
-  const HomeScreen({super.key});
+  const HomeScreen({required this.store, super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final Random _seeds = Random();
-  Difficulty? _loading;
-
-  Future<void> _start(Difficulty difficulty) async {
-    if (_loading != null) return;
-    setState(() => _loading = difficulty);
-    final puzzle = await generatePuzzle(difficulty, _seeds.nextInt(1 << 31));
-    if (!mounted) return;
-    setState(() => _loading = null);
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (BuildContext context) => SudokuScreen(puzzle: puzzle),
-      ),
-    );
-  }
+  /// Where games in progress are kept.
+  final GameStore store;
 
   @override
   Widget build(BuildContext context) {
@@ -40,47 +21,70 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
+            child: ListView(
+              shrinkWrap: true,
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    'Sudoku',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.displaySmall,
+              children: <Widget>[
+                Text(
+                  'Actufree',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displaySmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Free puzzles. No ads, no accounts, nothing collected.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(height: 32),
-                  for (final difficulty in Difficulty.values)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: FilledButton.tonal(
-                        onPressed: _loading == null
-                            ? () => _start(difficulty)
-                            : null,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: _loading == difficulty
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  difficulty.label,
-                                  style: theme.textTheme.titleMedium,
-                                ),
-                        ),
-                      ),
+                ),
+                const SizedBox(height: 32),
+                _GameTile(
+                  title: 'Sudoku',
+                  subtitle: 'Fill the grid, one to nine',
+                  icon: Icons.grid_3x3,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) =>
+                          DifficultyScreen(store: store),
                     ),
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _GameTile extends StatelessWidget {
+  const _GameTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        key: ValueKey<String>('game-$title'),
+        leading: Icon(icon, size: 32, color: theme.colorScheme.primary),
+        title: Text(title, style: theme.textTheme.titleLarge),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        onTap: onTap,
       ),
     );
   }

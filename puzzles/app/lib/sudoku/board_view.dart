@@ -82,13 +82,13 @@ class _CellView extends StatelessWidget {
     final isPeer = selected != null && selected.peers.contains(cell);
     final selectedValue = selected == null ? null : board.valueAt(selected);
     final isMatch = !isSelected && value != null && value == selectedValue;
-    final isConflict = game.conflicts.contains(cell);
+    final isWrong = game.isWrong(cell);
     final isFlagged = game.highlighted.contains(cell);
 
     final Color? background;
     if (isSelected) {
       background = palette.selectedSurface;
-    } else if (isConflict) {
+    } else if (isWrong) {
       background = palette.conflictSurface;
     } else if (isFlagged || isMatch) {
       background = palette.matchSurface;
@@ -106,7 +106,7 @@ class _CellView extends StatelessWidget {
           fontSize: size * 0.58,
           height: 1,
           fontWeight: isGiven ? FontWeight.w600 : FontWeight.w400,
-          color: isConflict
+          color: isWrong
               ? palette.conflict
               : isGiven
                   ? palette.given
