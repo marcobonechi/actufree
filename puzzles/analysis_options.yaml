@@ -1,0 +1,22 @@
+# Shared analysis settings for every package in the workspace.
+# Each member includes this file alongside its own lint base.
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - directives_ordering
+    - prefer_final_in_for_each
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_constructors_first
+    - unawaited_futures
+    - unnecessary_lambdas
+    - unnecessary_parenthesis
+    - use_super_parameters

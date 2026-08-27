@@ -1,0 +1,13 @@
+name: sudoku_engine
+description: "Pure-Dart Sudoku rules: board, solver, generator, difficulty rating and hints. No Flutter imports."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.1
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

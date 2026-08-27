@@ -1,0 +1,11 @@
+name: puzzles_workspace
+description: "Workspace root for the Flutter puzzle collection. Not a publishable package."
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.1
+
+workspace:
+  - app
+  - packages/puzzle_kit
+  - packages/sudoku_engine
