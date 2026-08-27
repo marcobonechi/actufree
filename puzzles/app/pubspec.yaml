@@ -12,6 +12,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  blockblast_engine:
+    path: ../packages/blockblast_engine
   puzzle_kit:
     path: ../packages/puzzle_kit
   sudoku_engine:

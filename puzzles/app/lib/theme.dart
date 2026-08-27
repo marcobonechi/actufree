@@ -142,17 +142,144 @@ class SudokuPalette extends ThemeExtension<SudokuPalette> {
   }
 }
 
+/// Colours the Block Blast board needs.
+///
+/// Six piece colours, plus the surfaces around them. The six are the same
+/// Okabe-Ito hues Sudoku draws from, chosen so two pieces sitting side by side
+/// stay distinguishable under the common forms of colour blindness — which
+/// matters more here than it does in Sudoku, where colour never carries a
+/// rule. Here it is the only thing separating one block from its neighbour.
+///
+/// The engine paints a cell with a number in `1..paintCount` and knows nothing
+/// more about it. [pieceColor] is where that number becomes a colour.
+@immutable
+class BlockPalette extends ThemeExtension<BlockPalette> {
+  /// Creates a palette.
+  const BlockPalette({
+    required this.pieces,
+    required this.emptyCell,
+    required this.boardSurface,
+    required this.ghost,
+    required this.clearFlash,
+    required this.deadPiece,
+  });
+
+  /// The light-mode palette.
+  static const BlockPalette light = BlockPalette(
+    pieces: _okabeIto,
+    emptyCell: Color(0xFFE7EDF3),
+    boardSurface: Color(0xFFF4F7FA),
+    ghost: Color(0xFF44505C),
+    clearFlash: Color(0xFFF0E442),
+    deadPiece: Color(0xFF9AA6B2),
+  );
+
+  /// The dark-mode palette.
+  ///
+  /// The pieces keep their hues: they are the game's vocabulary, and a player
+  /// who learns that the long bar is usually blue should not have to relearn
+  /// it after sunset. Only what sits behind them changes.
+  static const BlockPalette dark = BlockPalette(
+    pieces: _okabeIto,
+    emptyCell: Color(0xFF20272E),
+    boardSurface: Color(0xFF161C22),
+    ghost: Color(0xFFB9C4CF),
+    clearFlash: Color(0xFFF0E442),
+    deadPiece: Color(0xFF5A6672),
+  );
+
+  /// The colour of each paint value, from `1` upwards.
+  final List<Color> pieces;
+
+  /// A square with nothing on it.
+  final Color emptyCell;
+
+  /// Behind the whole board.
+  final Color boardSurface;
+
+  /// The outline drawn around where a dragged piece would land.
+  ///
+  /// Neutral rather than the piece's own colour: the landing is filled in
+  /// that colour already, and an outline of the same hue would disappear
+  /// into it.
+  final Color ghost;
+
+  /// The flash over a row or column on its way out.
+  final Color clearFlash;
+
+  /// A piece in the tray that no longer fits anywhere.
+  final Color deadPiece;
+
+  /// The colour for [paint], the number the engine put in a cell.
+  ///
+  /// Wraps rather than throwing on a value from outside the palette: a save
+  /// written by a future version with more colours should look odd, not crash.
+  Color pieceColor(int paint) => pieces[(paint - 1) % pieces.length];
+
+  @override
+  BlockPalette copyWith({
+    List<Color>? pieces,
+    Color? emptyCell,
+    Color? boardSurface,
+    Color? ghost,
+    Color? clearFlash,
+    Color? deadPiece,
+  }) {
+    return BlockPalette(
+      pieces: pieces ?? this.pieces,
+      emptyCell: emptyCell ?? this.emptyCell,
+      boardSurface: boardSurface ?? this.boardSurface,
+      ghost: ghost ?? this.ghost,
+      clearFlash: clearFlash ?? this.clearFlash,
+      deadPiece: deadPiece ?? this.deadPiece,
+    );
+  }
+
+  @override
+  BlockPalette lerp(ThemeExtension<BlockPalette>? other, double t) {
+    if (other is! BlockPalette) return this;
+    return BlockPalette(
+      pieces: <Color>[
+        for (var i = 0; i < pieces.length; i++)
+          Color.lerp(pieces[i], other.pieces[i], t)!,
+      ],
+      emptyCell: Color.lerp(emptyCell, other.emptyCell, t)!,
+      boardSurface: Color.lerp(boardSurface, other.boardSurface, t)!,
+      ghost: Color.lerp(ghost, other.ghost, t)!,
+      clearFlash: Color.lerp(clearFlash, other.clearFlash, t)!,
+      deadPiece: Color.lerp(deadPiece, other.deadPiece, t)!,
+    );
+  }
+
+  /// Six of the eight Okabe-Ito hues. The palette's yellow and black are left
+  /// out: yellow is spoken for by [clearFlash], and black is not a block.
+  static const List<Color> _okabeIto = <Color>[
+    Color(0xFF0072B2), // blue
+    Color(0xFFE69F00), // orange
+    Color(0xFF009E73), // bluish green
+    Color(0xFFCC79A7), // reddish purple
+    Color(0xFF56B4E9), // sky blue
+    Color(0xFFD55E00), // vermillion
+  ];
+}
+
+/// The Block Blast palette for the current theme.
+BlockPalette blockPaletteOf(BuildContext context) =>
+    Theme.of(context).extension<BlockPalette>() ?? BlockPalette.light;
+
 /// The palette for the current theme.
 SudokuPalette paletteOf(BuildContext context) =>
     Theme.of(context).extension<SudokuPalette>() ?? SudokuPalette.light;
 
-/// The Actufree theme for [brightness]: the shared scaffolding plus Sudoku's
-/// board colours.
-ThemeData actufreeTheme(Brightness brightness) => buildTheme(
-      brightness: brightness,
-      extensions: <ThemeExtension<dynamic>>[
-        brightness == Brightness.dark
-            ? SudokuPalette.dark
-            : SudokuPalette.light,
-      ],
-    );
+/// The Actufree theme for [brightness]: the shared scaffolding plus each
+/// game's board colours.
+ThemeData actufreeTheme(Brightness brightness) {
+  final dark = brightness == Brightness.dark;
+  return buildTheme(
+    brightness: brightness,
+    extensions: <ThemeExtension<dynamic>>[
+      dark ? SudokuPalette.dark : SudokuPalette.light,
+      dark ? BlockPalette.dark : BlockPalette.light,
+    ],
+  );
+}

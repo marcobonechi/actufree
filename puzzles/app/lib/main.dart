@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 
+import 'blockblast/block_screen.dart';
 import 'sudoku/difficulty_screen.dart';
 import 'theme.dart';
 
@@ -10,6 +13,7 @@ Future<void> main() async {
   runApp(
     ActufreeApp(
       store: GameStore(storage),
+      scores: BestScores(storage),
       settings: await SettingsController.load(storage),
     ),
   );
@@ -18,10 +22,18 @@ Future<void> main() async {
 /// Actufree: a collection of free puzzle games.
 class ActufreeApp extends StatelessWidget {
   /// Creates the app.
-  const ActufreeApp({required this.store, required this.settings, super.key});
+  const ActufreeApp({
+    required this.store,
+    required this.scores,
+    required this.settings,
+    super.key,
+  });
 
   /// Where games in progress are kept.
   final GameStore store;
+
+  /// Where best scores are kept.
+  final BestScores scores;
 
   /// The player's preferences.
   final SettingsController settings;
@@ -50,6 +62,14 @@ class ActufreeApp extends StatelessWidget {
                   builder: (BuildContext context) =>
                       DifficultyScreen(store: store),
                 ),
+              ),
+            ),
+            GameEntry(
+              title: 'Block Blast',
+              subtitle: 'Drop shapes, clear lines, last as long as you can',
+              icon: Icons.grid_view,
+              onOpen: (BuildContext context) => unawaited(
+                openBlockBlast(context, store: store, scores: scores),
               ),
             ),
           ],
