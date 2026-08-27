@@ -126,4 +126,61 @@ void main() {
       expect(find.byType(SudokuBoardView), findsOneWidget);
     });
   });
+
+  group('the Fill affordance', () {
+    test('leaves exactly one cell, selected, and corrects mistakes', () {
+      final game = SudokuGame(puzzle);
+      final wrongAt = Cell.all.firstWhere(
+        (Cell cell) => puzzle.givens.valueAt(cell) == null,
+      );
+      final answer = puzzle.solution.valueAt(wrongAt)!;
+      game
+        ..select(wrongAt)
+        ..enter(answer == 9 ? 1 : answer + 1);
+      expect(game.mistakes, isNotEmpty);
+
+      game.autocomplete();
+
+      expect(game.board.emptyCells, hasLength(1));
+      expect(game.selected, game.board.emptyCells.single);
+      expect(game.mistakes, isEmpty, reason: 'a wrong entry should be fixed');
+      expect(game.isSolved, isFalse);
+      // The bulk fill is silent; the player's last digit is what flashes.
+      expect(game.justCompleted, isEmpty);
+    });
+
+    testWidgets('one tap after Fill flashes and then wins', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: actufreeTheme(Brightness.light),
+        home: SudokuScreen(puzzle: puzzle),
+      ));
+      await tester.tap(find.byKey(const ValueKey<String>('tool-Fill')));
+      await tester.pump();
+
+      final remaining = Cell.all.firstWhere(
+        (Cell cell) =>
+            puzzle.givens.valueAt(cell) == null &&
+            tester
+                    .widget<SudokuScreen>(find.byType(SudokuScreen))
+                    .puzzle
+                    .solution
+                    .valueAt(cell) !=
+                null &&
+            find
+                .descendant(
+                  of: find.byKey(ValueKey<String>('cell-${cell.index}')),
+                  matching: find.byType(Text),
+                )
+                .evaluate()
+                .isEmpty,
+      );
+      await tester.tap(
+        find.byKey(
+          ValueKey<String>('digit-${puzzle.solution.valueAt(remaining)}'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Solved'), findsOneWidget);
+    });
+  });
 }

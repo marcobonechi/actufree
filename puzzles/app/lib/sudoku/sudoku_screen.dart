@@ -8,6 +8,13 @@ import 'board_view.dart';
 import 'number_pad.dart';
 import 'sudoku_game.dart';
 
+/// Whether to offer the Fill button, which completes the grid bar one cell.
+///
+/// A testing affordance so a puzzle can be taken to its end state in a tap,
+/// rather than a feature anyone would want in a Sudoku app. Flip this to false
+/// to remove it.
+const bool kShowAutocomplete = true;
+
 /// The playing screen for one puzzle.
 class SudokuScreen extends StatefulWidget {
   /// Plays [puzzle], resuming from [resumeFrom] when there is a saved board.
@@ -148,7 +155,11 @@ class _SudokuScreenState extends State<SudokuScreen> {
                 padding: const EdgeInsets.all(10),
                 child: SudokuBoardView(game: _game),
               );
-              final pad = NumberPad(game: _game, onHint: _onHint);
+              final pad = NumberPad(
+                game: _game,
+                onHint: _onHint,
+                onAutocomplete: kShowAutocomplete ? _game.autocomplete : null,
+              );
               if (constraints.maxWidth > constraints.maxHeight) {
                 return Row(
                   children: <Widget>[

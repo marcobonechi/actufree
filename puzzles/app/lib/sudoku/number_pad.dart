@@ -7,13 +7,21 @@ import 'sudoku_game.dart';
 /// Digit entry and the tools that go with it.
 class NumberPad extends StatelessWidget {
   /// Creates the pad for [game].
-  const NumberPad({required this.game, required this.onHint, super.key});
+  const NumberPad({
+    required this.game,
+    required this.onHint,
+    this.onAutocomplete,
+    super.key,
+  });
 
   /// The game being played.
   final SudokuGame game;
 
   /// Called when the player asks for a hint.
   final VoidCallback onHint;
+
+  /// Fills the grid bar one cell. Omitted when the affordance is off.
+  final VoidCallback? onAutocomplete;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +55,14 @@ class NumberPad extends StatelessWidget {
                   onPressed: game.isSolved ? null : onHint,
                 ),
               ),
+              if (onAutocomplete != null)
+                Expanded(
+                  child: _Tool(
+                    icon: Icons.fast_forward,
+                    label: 'Fill',
+                    onPressed: game.isSolved ? null : onAutocomplete,
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),

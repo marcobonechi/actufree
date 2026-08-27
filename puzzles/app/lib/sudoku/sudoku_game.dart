@@ -143,6 +143,35 @@ class SudokuGame extends ChangeNotifier {
     }
   }
 
+  /// Fills the grid from the solution, leaving the last cell for the player.
+  ///
+  /// A testing affordance, not a game feature — see [kShowAutocomplete].
+  ///
+  /// One cell is deliberately left empty. Filling the whole grid would finish
+  /// the puzzle in the same frame it completed the last units, so the win
+  /// dialog would cover the completion flash — exactly the thing worth
+  /// looking at. Leaving one cell means a single tap plays the flash and the
+  /// win in sequence.
+  ///
+  /// The fill itself is applied without announcing completions: otherwise two
+  /// dozen units would finish at once and the board would go entirely green.
+  void autocomplete() {
+    final open = Cell.all.where((Cell cell) => !_board.isGiven(cell)).toList();
+    if (open.isEmpty) return;
+    final last = open.last;
+    var next = _board;
+    for (final cell in open) {
+      if (cell == last) {
+        if (next.valueAt(cell) != null) next = next.withValue(cell, null);
+        continue;
+      }
+      final answer = puzzle.solution.valueAt(cell)!;
+      if (next.valueAt(cell) != answer) next = next.withValue(cell, answer);
+    }
+    _selected = last;
+    _apply(next, announce: false);
+  }
+
   /// Clears every entry and note, keeping the clues.
   void restart() {
     if (_board == puzzle.givens) return;
