@@ -91,33 +91,46 @@ class _Slot extends StatelessWidget {
         ? palette.pieceColor(piece.paint)
         : palette.deadPiece;
 
-    return Center(
-      child: Semantics(
-        label: _describe(piece.shape),
-        hint: playable
-            ? 'Drag onto the board'
-            : 'No longer fits anywhere on the board',
-        child: Draggable<int>(
-          data: index,
-          dragAnchorStrategy: (_, _, _) => Offset(
-            piece.shape.width * boardCellSize / 2,
-            piece.shape.height * boardCellSize + kCarryLift * boardCellSize,
-          ),
-          feedback: PieceView(
-            shape: piece.shape,
-            color: palette.pieceColor(piece.paint),
-            cellSize: boardCellSize,
-          ),
-          childWhenDragging: const SizedBox.shrink(),
-          onDragStarted: () => game.startDrag(index),
-          onDragEnd: (DraggableDetails details) {
-            if (!details.wasAccepted) game.endDrag();
-          },
-          child: PieceView(
-            shape: piece.shape,
-            color: color,
-            cellSize: trayCellSize,
-            opacity: playable ? 1 : 0.55,
+    return Semantics(
+      label: _describe(piece.shape),
+      hint: playable
+          ? 'Drag onto the board'
+          : 'No longer fits anywhere on the board',
+      child: Draggable<int>(
+        data: index,
+        dragAnchorStrategy: (_, _, _) => Offset(
+          piece.shape.width * boardCellSize / 2,
+          piece.shape.height * boardCellSize + kCarryLift * boardCellSize,
+        ),
+        feedback: PieceView(
+          shape: piece.shape,
+          color: palette.pieceColor(piece.paint),
+          cellSize: boardCellSize,
+        ),
+        childWhenDragging: const SizedBox.expand(),
+        onDragStarted: () => game.startDrag(index),
+        onDragEnd: (DraggableDetails details) {
+          if (!details.wasAccepted) game.endDrag();
+        },
+        // The whole slot is the handle, not just the blocks drawn in it.
+        // A 1x1 piece is half a board cell across — around 23 points on a
+        // phone, against the 44 a fingertip actually needs — so grabbing one
+        // by its own outline means missing it about as often as hitting it.
+        //
+        // A transparent ColoredBox rather than a bare SizedBox: an empty
+        // SizedBox has nothing to hit-test against, so the padding around
+        // the piece would stay as dead as it is now.
+        child: SizedBox.expand(
+          child: ColoredBox(
+            color: Colors.transparent,
+            child: Center(
+              child: PieceView(
+                shape: piece.shape,
+                color: color,
+                cellSize: trayCellSize,
+                opacity: playable ? 1 : 0.55,
+              ),
+            ),
           ),
         ),
       ),

@@ -363,6 +363,35 @@ void main() {
     );
   });
 
+  testWidgets('a piece can be picked up from anywhere in its slot', (
+    tester,
+  ) async {
+    final game = gameWith(
+      board: BlockBoard.empty(),
+      hand: <BlockPiece?>[BlockPiece(single, 1), null, null],
+    );
+    await tester.pumpWidget(host(game));
+
+    // A corner of the slot, well clear of the block drawn in the middle of
+    // it. A player aiming at a small piece lands here constantly.
+    final slotRect = tester.getRect(slot(0));
+    final board = tester.getRect(find.byType(BlockBoardView));
+    final cell = board.width / boardSize;
+
+    final gesture = await tester.startGesture(
+      slotRect.topLeft + const Offset(6, 6),
+    );
+    await tester.pump();
+    await gesture.moveTo(
+      board.topLeft + Offset(cell / 2, cell + kCarryLift * cell),
+    );
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsOneWidget, reason: 'the piece never lifted');
+  });
+
   testWidgets('a piece is described for a screen reader', (tester) async {
     final game = gameWith(
       board: BlockBoard.empty(),
