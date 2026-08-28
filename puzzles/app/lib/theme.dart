@@ -345,7 +345,12 @@ class BlockColours {
 }
 
 /// How many points between one set of block colours and the next.
-const int kColourInterval = 250;
+///
+/// A placement scores about four and a cleared line ten, so this lands
+/// somewhere around twenty moves — close enough together that a run of any
+/// length sees the board change more than once, which is the whole point of
+/// it.
+const int kColourInterval = 150;
 
 /// How long the board takes to change its colours.
 ///
