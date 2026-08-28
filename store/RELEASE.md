@@ -155,32 +155,48 @@ account and cannot be swapped later without a support-driven transfer, so pick
 one that will outlive the project — a `sidevibe.ai` address rather than a
 personal inbox, if this is meant to be Sidevibe's.
 
-### Account type — decided at signup, permanent
+### Account type — decided: personal
 
-| | Personal | Organization |
-| --- | --- | --- |
-| Verification | Government ID | D-U-N-S number + org details |
-| Time to verify | Hours to ~2 days | Days to weeks if no D-U-N-S yet |
-| Developer name shown | Your name | `Sidevibe` |
-| Closed-testing requirement | **12 testers, 14 days, before production** | **Exempt** |
+Sidevibe is not a registered legal entity, so an organization account is not
+available: it requires a D-U-N-S number, which requires a real business. That
+decides it — **personal account**.
 
-The last row is the one that matters. A personal account created after
-13 Nov 2023 must run a closed test with at least 12 testers who stay opted in
-for 14 continuous days before it can even apply for production access — and
-the application itself is then reviewed. Organization accounts skip that.
+The consequence, carried forward: a personal account created now must run a
+closed test with at least 12 testers opted in for 14 continuous days before it
+can apply for production access. Internal testing is unaffected, so getting the
+build to our own testers is not delayed by this at all. It only gates a public
+launch. See "Production, later" at the end.
 
-Confirm the exemption on the signup flow before choosing; Google has adjusted
-these rules more than once.
+### Trying to recover the old account first
 
-**Neither choice affects testers.** Internal testing is available to both as
-soon as the account is verified, so the plan below is unchanged either way.
-The fork only decides how long a public launch takes.
+Being attempted before paying again, because a pre-Nov-2023 account would be
+exempt from the 12-tester requirement — worth roughly two weeks of timeline if
+it works.
 
-Recommendation: if Sidevibe is a real legal entity, register as an
-organization — the D-U-N-S wait is likely shorter than the 14-day test plus
-review, and it is a cost paid once. If it is not an entity, go personal, and
-start the 12-tester closed test the same week you start internal testing so
-the 14 days run in the background.
+Understand the bar: support "can only reinstate a Play Console account if an
+error was made". That is not an exception process. An appeal succeeds by
+showing the closure criteria were not actually met, so the question to answer
+is whether either of these is false:
+
+- the account was created more than a year ago and never submitted an app for
+  review, or
+- its apps have under 1,000 lifetime installs, phone and contact email were
+  unverified, and Play Console went unused for 180 days
+
+If the account genuinely sat unused for years without ever submitting an app,
+the criteria were met, there was no error, and reinstatement is very unlikely.
+
+There is also a reported catch-22: support and appeal links route through Play
+Console, which a closed account can no longer open. Developers report appeal
+options being disabled for exactly this reason. The entry point most likely to
+work without console access is the termination/suspension troubleshooter:
+https://support.google.com/googleplay/android-developer/troubleshooter/2993242
+Appeals are answered only in Chinese, English, Japanese, and Korean.
+
+**Time-box this.** Nothing ships until there is an account, so an open-ended
+wait costs release time directly. If there is no substantive reply in two
+weeks, register the personal account and move on; if reinstatement then arrives
+later, it is a bonus, not a plan.
 
 ## 5. Create the app
 
@@ -244,3 +260,24 @@ after they opt in.
 Bump the build number in `puzzles/app/pubspec.yaml` — `1.0.0+1` -> `1.0.0+2`
 — before every upload. Play rejects a bundle whose version code it has already
 seen, and the version code comes from the number after the `+`.
+
+## Production, later
+
+Only relevant if Actufree goes public; internal testing needs none of it.
+
+A personal account registered after 13 Nov 2023 must, before applying for
+production access:
+
+1. Run a **closed** test (not internal) with **at least 12 testers** who are
+   opted in and stay opted in.
+2. Keep it running **14 continuous days**. Losing testers below 12 resets the
+   clock, so recruit more than 12 — 15 or so absorbs the dropouts.
+3. Then apply for production access, which is itself reviewed.
+
+Testers must opt in with the Google account their phone actually uses, and
+staying opted in matters more than actually playing. Recruit for the whole two
+weeks up front rather than topping up mid-run.
+
+Practical sequencing: start the closed test the same day internal testing goes
+live, from the same bundle. The 14 days then run in the background while the
+app is being tested normally, instead of starting after.
