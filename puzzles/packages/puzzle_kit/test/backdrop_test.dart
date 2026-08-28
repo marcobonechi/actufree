@@ -78,6 +78,22 @@ void main() {
     }
   });
 
+  test('the status bar is told what to draw over the backdrop', () {
+    // The app bar is transparent so the backdrop shows through it, which
+    // leaves Android with nothing to work out the status bar icons from. On
+    // light it drew white on white and the clock vanished.
+    expect(
+      buildTheme(brightness: Brightness.light).appBarTheme.systemOverlayStyle
+          ?.statusBarIconBrightness,
+      Brightness.dark,
+    );
+    expect(
+      buildTheme(brightness: Brightness.dark).appBarTheme.systemOverlayStyle
+          ?.statusBarIconBrightness,
+      Brightness.light,
+    );
+  });
+
   testWidgets('the scaffold and app bar keep out of its way', (tester) async {
     // Either one painting its own flat panel would hide the backdrop behind
     // exactly the screens it exists for.

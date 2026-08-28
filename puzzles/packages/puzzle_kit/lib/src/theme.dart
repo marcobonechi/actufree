@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Builds an app theme for [brightness].
 ///
@@ -23,11 +24,18 @@ ThemeData buildTheme({
     // so the scaffold and the app bar get out of its way rather than each
     // laying a flat panel over the top of it.
     scaffoldBackgroundColor: Colors.transparent,
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
+      // Android tints the status bar icons to contrast with whatever the app
+      // bar is filled with, and a transparent app bar leaves it nothing to go
+      // on — so on a light backdrop it kept drawing white on white and the
+      // clock disappeared. Said outright here instead.
+      systemOverlayStyle: brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
     ),
   );
   // Tuned from the resolved theme rather than passed in, so it is applied on
