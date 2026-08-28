@@ -120,9 +120,40 @@ Package name `ai.sidevibe.actufree` is unaffected. Closed accounts burn the
 package names they *published*, and the old account never published anything,
 so the name is free.
 
-Before paying, check the closure email for an appeal or reactivation link. If
-the old account can be revived it is worth the detour — see the timeline note
-below for why.
+The closure is final: "closed due to inactivity, and can't be reactivated."
+There is no appeal path, and the original 25 USD is gone.
+
+### Why it closed, and how not to repeat it
+
+Google closes a developer account that "was created more than a year ago and
+has never submitted an app for review". That is almost certainly what happened
+— an account registered in advance, then never shipped from.
+
+The lesson for the new account: **register when you are ready to submit, not
+before.** Registering now is right because a build is ready today. Registering
+"to have it" and shipping a year later walks into the same closure.
+
+The other closure rule, for later: apps under 1,000 lifetime installs whose
+account has not verified its phone and contact email and has not opened Play
+Console in 180 days. Verify both contact fields during setup and this one
+never applies.
+
+### Which Google account to register with
+
+Unresolved: whether the Google account behind a closed developer account can
+register a fresh one. Google's policy page does not say, and the developer
+community has repeated reports of exactly this being stuck ("can't create new
+developer account with same Google account", "email locked in loop"). Those
+are user reports, not Google statements.
+
+So: try the old Google account first, and if the flow loops or refuses, do not
+fight it — register with a different Google account. Nothing in this repo is
+tied to which account owns the developer profile.
+
+Whichever account is used becomes the permanent owner of the developer
+account and cannot be swapped later without a support-driven transfer, so pick
+one that will outlive the project — a `sidevibe.ai` address rather than a
+personal inbox, if this is meant to be Sidevibe's.
 
 ### Account type — decided at signup, permanent
 
