@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 
 import 'blockblast/block_screen.dart';
+import 'chess/chess_start_screen.dart';
 import 'sudoku/difficulty_screen.dart';
 import 'theme.dart';
 
@@ -76,6 +77,13 @@ class ActufreeApp extends StatelessWidget {
               onOpen: (BuildContext context) => unawaited(
                 openBlockBlast(context, store: store, scores: scores),
               ),
+            ),
+            GameEntry(
+              title: 'Chess',
+              subtitle: 'Two players on one board, or take on the computer',
+              icon: Icons.castle,
+              onOpen: (BuildContext context) =>
+                  unawaited(openChess(context, store: store)),
             ),
           ],
         ),

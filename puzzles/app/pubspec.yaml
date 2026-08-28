@@ -14,6 +14,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   blockblast_engine:
     path: ../packages/blockblast_engine
+  chess_engine:
+    path: ../packages/chess_engine
   puzzle_kit:
     path: ../packages/puzzle_kit
   sudoku_engine:

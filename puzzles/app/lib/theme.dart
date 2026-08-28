@@ -1,3 +1,4 @@
+import 'package:chess_engine/chess_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 
@@ -253,6 +254,167 @@ class BlockPalette extends ThemeExtension<BlockPalette> {
 
 }
 
+
+/// Colours the chess board needs.
+///
+/// Two square colours, two piece colours with an outline each, and the marks
+/// the board draws over them. A chess board carries no information in colour
+/// at all — the pieces are told apart by shape and the squares by position —
+/// so unlike Block Blast this palette has nothing riding on being
+/// distinguishable by hue. What it does need is contrast: a piece has to read
+/// against both square colours, and the marks have to read over the pieces.
+///
+/// Hence the outline on both sets of men. A light piece on a light square and
+/// a dark piece on a dark square are the two cases that would otherwise go
+/// soft, and an outline in the opposite colour fixes both without tinting the
+/// board.
+@immutable
+class ChessPalette extends ThemeExtension<ChessPalette> {
+  /// Creates a palette.
+  const ChessPalette({
+    required this.lightSquare,
+    required this.darkSquare,
+    required this.whitePiece,
+    required this.whitePieceLine,
+    required this.blackPiece,
+    required this.blackPieceLine,
+    required this.selected,
+    required this.legalMark,
+    required this.lastMove,
+    required this.check,
+    required this.coordinate,
+  });
+
+  /// The light-mode palette.
+  static const ChessPalette light = ChessPalette(
+    lightSquare: Color(0xFFEDE6D6),
+    darkSquare: Color(0xFF8CA789),
+    whitePiece: Color(0xFFFCFAF4),
+    whitePieceLine: Color(0xFF2A2E33),
+    blackPiece: Color(0xFF2B3138),
+    blackPieceLine: Color(0xFFF1EEE6),
+    selected: Color(0xFF0072B2),
+    legalMark: Color(0xFF344049),
+    lastMove: Color(0xFFE69F00),
+    check: Color(0xFFD55E00),
+    coordinate: Color(0xFF4C5A50),
+  );
+
+  /// The dark-mode palette.
+  ///
+  /// The squares come down, but only to the middle. A chess board in the dark
+  /// cannot go as dark as the rest of the app does: the men have to read
+  /// against it in both colours, so the squares have to sit between them
+  /// rather than beside the black ones. Taken any further down, the black
+  /// pieces stop being pieces on a board and become outlines on a wall.
+  ///
+  /// What also has to survive the trip is the gap between the two squares — a
+  /// board whose colours have drifted close enough to argue about is a board
+  /// nobody can read a diagonal on.
+  static const ChessPalette dark = ChessPalette(
+    lightSquare: Color(0xFF6B7A70),
+    darkSquare: Color(0xFF40504A),
+    whitePiece: Color(0xFFF2EFE7),
+    whitePieceLine: Color(0xFF14181B),
+    blackPiece: Color(0xFF14181C),
+    blackPieceLine: Color(0xFFCED6DB),
+    selected: Color(0xFF56B4E9),
+    legalMark: Color(0xFFDCE3E8),
+    lastMove: Color(0xFFE69F00),
+    check: Color(0xFFE8703A),
+    coordinate: Color(0xFFB6C1BA),
+  );
+
+  /// The squares a1 is not.
+  final Color lightSquare;
+
+  /// The squares a1 is.
+  final Color darkSquare;
+
+  /// The body of a white piece.
+  final Color whitePiece;
+
+  /// The line drawn around a white piece.
+  final Color whitePieceLine;
+
+  /// The body of a black piece.
+  final Color blackPiece;
+
+  /// The line drawn around a black piece.
+  final Color blackPieceLine;
+
+  /// The square a player has picked a piece up from.
+  final Color selected;
+
+  /// The dot on a square that piece may go to, and the ring around one it may
+  /// take on.
+  final Color legalMark;
+
+  /// The two squares of the move just played.
+  final Color lastMove;
+
+  /// The square of a king in check.
+  final Color check;
+
+  /// The file letters and rank numbers along the edge.
+  final Color coordinate;
+
+  /// The body colour for a piece of [color].
+  Color body(PieceColor color) =>
+      color == PieceColor.white ? whitePiece : blackPiece;
+
+  /// The outline colour for a piece of [color].
+  Color outline(PieceColor color) =>
+      color == PieceColor.white ? whitePieceLine : blackPieceLine;
+
+  @override
+  ChessPalette copyWith({
+    Color? lightSquare,
+    Color? darkSquare,
+    Color? whitePiece,
+    Color? whitePieceLine,
+    Color? blackPiece,
+    Color? blackPieceLine,
+    Color? selected,
+    Color? legalMark,
+    Color? lastMove,
+    Color? check,
+    Color? coordinate,
+  }) {
+    return ChessPalette(
+      lightSquare: lightSquare ?? this.lightSquare,
+      darkSquare: darkSquare ?? this.darkSquare,
+      whitePiece: whitePiece ?? this.whitePiece,
+      whitePieceLine: whitePieceLine ?? this.whitePieceLine,
+      blackPiece: blackPiece ?? this.blackPiece,
+      blackPieceLine: blackPieceLine ?? this.blackPieceLine,
+      selected: selected ?? this.selected,
+      legalMark: legalMark ?? this.legalMark,
+      lastMove: lastMove ?? this.lastMove,
+      check: check ?? this.check,
+      coordinate: coordinate ?? this.coordinate,
+    );
+  }
+
+  @override
+  ChessPalette lerp(ThemeExtension<ChessPalette>? other, double t) {
+    if (other is! ChessPalette) return this;
+    return ChessPalette(
+      lightSquare: Color.lerp(lightSquare, other.lightSquare, t)!,
+      darkSquare: Color.lerp(darkSquare, other.darkSquare, t)!,
+      whitePiece: Color.lerp(whitePiece, other.whitePiece, t)!,
+      whitePieceLine: Color.lerp(whitePieceLine, other.whitePieceLine, t)!,
+      blackPiece: Color.lerp(blackPiece, other.blackPiece, t)!,
+      blackPieceLine: Color.lerp(blackPieceLine, other.blackPieceLine, t)!,
+      selected: Color.lerp(selected, other.selected, t)!,
+      legalMark: Color.lerp(legalMark, other.legalMark, t)!,
+      lastMove: Color.lerp(lastMove, other.lastMove, t)!,
+      check: Color.lerp(check, other.check, t)!,
+      coordinate: Color.lerp(coordinate, other.coordinate, t)!,
+    );
+  }
+}
+
 /// The block colours a board wears until the score moves it on.
 ///
 /// Hoisted out of [BlockColours] because a const field cannot be read from
@@ -370,6 +532,10 @@ const Duration kColourDrift = Duration(milliseconds: 1400);
 BlockColours coloursFor(int score) =>
     BlockColours.all[(score ~/ kColourInterval) % BlockColours.all.length];
 
+/// The chess palette for the current theme.
+ChessPalette chessPaletteOf(BuildContext context) =>
+    Theme.of(context).extension<ChessPalette>() ?? ChessPalette.light;
+
 /// The Block Blast palette for the current theme.
 BlockPalette blockPaletteOf(BuildContext context) =>
     Theme.of(context).extension<BlockPalette>() ?? BlockPalette.light;
@@ -387,6 +553,7 @@ ThemeData actufreeTheme(Brightness brightness) {
     extensions: <ThemeExtension<dynamic>>[
       dark ? SudokuPalette.dark : SudokuPalette.light,
       dark ? BlockPalette.dark : BlockPalette.light,
+      dark ? ChessPalette.dark : ChessPalette.light,
     ],
   );
 }
