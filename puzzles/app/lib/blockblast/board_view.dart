@@ -150,16 +150,15 @@ class _BoardPainter extends CustomPainter {
     if (wouldFill.isNotEmpty && carried != null) {
       final color = palette.pieceColor(carried);
       for (final coord in wouldFill) {
-        final rect = cellRect(coord, cell);
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            rect.deflate(cell * kBlockInset),
+            cellRect(coord, cell).deflate(cell * kBlockInset),
             Radius.circular(cell * kBlockRadius),
           ),
           Paint()..color = color.withValues(alpha: 0.42),
         );
-        paintBlockOutline(canvas, rect, palette.ghost, cell * 0.07);
       }
+      paintFootprintOutline(canvas, wouldFill, cell, palette.ghost, cell * 0.1);
     }
 
     // The cells on their way out. The engine has already emptied them, so this

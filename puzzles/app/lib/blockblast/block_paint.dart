@@ -47,22 +47,46 @@ void paintEmptyCell(Canvas canvas, Rect cell, Color color) {
   );
 }
 
-/// Draws the outline of a block filling [cell], in [color].
+/// Outlines the outside edge of [cells] in [color].
 ///
-/// Used for the ghost that follows a dragged piece, where a filled block would
-/// be mistaken for one already placed.
-void paintBlockOutline(Canvas canvas, Rect cell, Color color, double width) {
-  final side = cell.width;
-  canvas.drawRRect(
-    RRect.fromRectAndRadius(
-      cell.deflate(side * kBlockInset + width / 2),
-      Radius.circular(side * kBlockRadius),
-    ),
-    Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = width,
-  );
+/// Only the edges on the boundary are drawn: an edge shared with another cell
+/// in the set is inside the shape, and drawing it would turn the outline into
+/// a grid.
+///
+/// The line runs along the cell boundary rather than the block's own edge.
+/// Blocks are inset inside their cells, so this sits just outside the piece's
+/// silhouette — which is the whole point. A piece dropped on the board is
+/// drawn at the pointer's exact position while the landing it snaps to is
+/// rounded to a cell, so the two overlap almost entirely, and an outline
+/// tucked inside the cell would be hidden underneath the piece exactly when
+/// the player has lined it up.
+void paintFootprintOutline(
+  Canvas canvas,
+  Set<Coord> cells,
+  double cellSize,
+  Color color,
+  double width,
+) {
+  final stroke = Paint()
+    ..color = color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = width
+    ..strokeCap = StrokeCap.round;
+  for (final cell in cells) {
+    final rect = cellRect(cell, cellSize);
+    if (!cells.contains(cell.translate(-1, 0))) {
+      canvas.drawLine(rect.topLeft, rect.topRight, stroke);
+    }
+    if (!cells.contains(cell.translate(1, 0))) {
+      canvas.drawLine(rect.bottomLeft, rect.bottomRight, stroke);
+    }
+    if (!cells.contains(cell.translate(0, -1))) {
+      canvas.drawLine(rect.topLeft, rect.bottomLeft, stroke);
+    }
+    if (!cells.contains(cell.translate(0, 1))) {
+      canvas.drawLine(rect.topRight, rect.bottomRight, stroke);
+    }
+  }
 }
 
 /// The rectangle [coord] occupies on a board whose cells are [cellSize].
