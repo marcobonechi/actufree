@@ -5,6 +5,21 @@ import '../theme.dart';
 import 'block_game.dart';
 import 'block_paint.dart';
 
+/// How long a cleared line takes to go.
+///
+/// Short: the line is already gone as far as the game is concerned, and the
+/// animation is only there so the player sees which one went. Every
+/// millisecond past that is a millisecond of not being able to play. This and
+/// [kClearCurve] are the knobs worth turning if the clear feels wrong.
+const Duration kClearDuration = Duration(milliseconds: 200);
+
+/// How a cleared cell shrinks away.
+///
+/// Eases in, so the blocks hold their size for an instant before collapsing.
+/// That pause is what makes the line readable at this speed — going
+/// immediately would be over before the eye found it.
+const Curve kClearCurve = Curves.easeIn;
+
 /// The 8x8 board.
 ///
 /// Written directly rather than on a shared grid widget, for the reason the
@@ -29,7 +44,7 @@ class _BlockBoardViewState extends State<BlockBoardView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _clear = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 420),
+    duration: kClearDuration,
   )..addStatusListener(_onClearDone);
   late int _seenTick = widget.game.clearTick;
   Set<Coord> _clearing = const <Coord>{};
@@ -165,7 +180,7 @@ class _BoardPainter extends CustomPainter {
     // draws over the gap they left: a flash that shrinks and fades, which
     // reads as the line being taken away rather than simply vanishing.
     if (clearing.isNotEmpty && clearProgress < 1) {
-      final shrink = 1 - Curves.easeIn.transform(clearProgress);
+      final shrink = 1 - kClearCurve.transform(clearProgress);
       final flash = Paint()
         ..color = palette.clearFlash.withValues(alpha: 0.85 * shrink);
       for (final coord in clearing) {
