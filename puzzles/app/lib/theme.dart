@@ -166,7 +166,7 @@ class BlockPalette extends ThemeExtension<BlockPalette> {
 
   /// The light-mode palette.
   static const BlockPalette light = BlockPalette(
-    pieces: _okabeIto,
+    pieces: kOkabeItoPieces,
     emptyCell: Color(0xFFE7EDF3),
     boardSurface: Color(0xFFF4F7FA),
     ghost: Color(0xFF44505C),
@@ -180,7 +180,7 @@ class BlockPalette extends ThemeExtension<BlockPalette> {
   /// who learns that the long bar is usually blue should not have to relearn
   /// it after sunset. Only what sits behind them changes.
   static const BlockPalette dark = BlockPalette(
-    pieces: _okabeIto,
+    pieces: kOkabeItoPieces,
     emptyCell: Color(0xFF20272E),
     boardSurface: Color(0xFF161C22),
     ghost: Color(0xFFB9C4CF),
@@ -251,17 +251,119 @@ class BlockPalette extends ThemeExtension<BlockPalette> {
     );
   }
 
-  /// Six of the eight Okabe-Ito hues. The palette's yellow and black are left
-  /// out: yellow is spoken for by [clearFlash], and black is not a block.
-  static const List<Color> _okabeIto = <Color>[
-    Color(0xFF0072B2), // blue
-    Color(0xFFE69F00), // orange
-    Color(0xFF009E73), // bluish green
-    Color(0xFFCC79A7), // reddish purple
-    Color(0xFF56B4E9), // sky blue
-    Color(0xFFD55E00), // vermillion
+}
+
+/// The block colours a board wears until the score moves it on.
+///
+/// Hoisted out of [BlockColours] because a const field cannot be read from
+/// another const expression, and [BlockPalette]'s own defaults want it too.
+const List<Color> kOkabeItoPieces = <Color>[
+  Color(0xFF0072B2), // blue
+  Color(0xFFE69F00), // orange
+  Color(0xFF009E73), // bluish green
+  Color(0xFFCC79A7), // reddish purple
+  Color(0xFF56B4E9), // sky blue
+  Color(0xFFD55E00), // vermillion
+];
+
+/// One set of block colours.
+///
+/// A long run spent staring at the same six hues goes stale, so the game moves
+/// between sets as the score climbs. What it does *not* move is the board
+/// underneath them: the surfaces are what a player's eyes are actually
+/// resting on for half an hour, and changing their contrast is how you make a
+/// game tiring rather than less so.
+///
+/// Every set here is a published qualitative scheme designed to stay
+/// distinguishable under the common forms of colour blindness. That is the
+/// reason these are curated rather than generated: six random hues would look
+/// varied and would, sooner or later, deal two pieces nobody could tell apart.
+/// Adding a set means finding another scheme with the same property, not
+/// inventing one.
+///
+/// None of them contain a yellow. [BlockPalette.clearFlash] is yellow in every
+/// set on purpose — a line going out should mean the same thing whichever
+/// colours the board happens to be wearing — and a yellow block would muddy
+/// that.
+@immutable
+class BlockColours {
+  /// Names a set of six block colours.
+  const BlockColours({required this.name, required this.pieces});
+
+  /// What the set is called. For debugging and tests; never shown.
+  final String name;
+
+  /// The six colours, in paint order.
+  final List<Color> pieces;
+
+  /// Okabe and Ito's colourblind-safe palette, less its yellow and black.
+  static const BlockColours okabeIto = BlockColours(
+    name: 'Okabe-Ito',
+    pieces: kOkabeItoPieces,
+  );
+
+  /// Paul Tol's vibrant scheme: the punchiest of the three.
+  static const BlockColours tolVibrant = BlockColours(
+    name: 'Tol vibrant',
+    pieces: <Color>[
+      Color(0xFF0077BB), // blue
+      Color(0xFF33BBEE), // cyan
+      Color(0xFF009988), // teal
+      Color(0xFFEE7733), // orange
+      Color(0xFFCC3311), // red
+      Color(0xFFEE3377), // magenta
+    ],
+  );
+
+  /// Paul Tol's muted scheme: the gentlest, and the one a tired pair of eyes
+  /// is most glad to arrive at.
+  ///
+  /// Its indigo is not here. At a luminance of 0.036 it sits within 0.02 of
+  /// the dark board's empty cells, where every other colour in every set
+  /// clears 0.11 — so on a dark board it was legible by hue alone, which is
+  /// precisely the crutch these palettes exist to avoid needing. The blue
+  /// comes from Tol's light scheme instead, which is bright enough to survive
+  /// being seen in black and white.
+  static const BlockColours tolMuted = BlockColours(
+    name: 'Tol muted',
+    pieces: <Color>[
+      Color(0xFF77AADD), // blue
+      Color(0xFF88CCEE), // cyan
+      Color(0xFF117733), // green
+      Color(0xFFCC6677), // rose
+      Color(0xFFAA4499), // purple
+      Color(0xFF44AA99), // teal
+    ],
+  );
+
+  /// Every set, in the order the game moves through them.
+  static const List<BlockColours> all = <BlockColours>[
+    okabeIto,
+    tolVibrant,
+    tolMuted,
   ];
 }
+
+/// How many points between one set of block colours and the next.
+const int kColourInterval = 250;
+
+/// How long the board takes to change its colours.
+///
+/// Slow enough to read as the light changing rather than as a glitch. Every
+/// block on the board changes at once — the board remembers which piece filled
+/// a square, not what colour it was — so this wants to be a drift, not a cut.
+const Duration kColourDrift = Duration(milliseconds: 1400);
+
+/// The set of block colours a game on [score] is wearing.
+///
+/// Derived from the score rather than stored, which means a resumed run comes
+/// back in the colours it was left in without the save having to carry them.
+///
+/// The sets rotate rather than being drawn at random. Random would sometimes
+/// draw the set already on screen, and a colour change that changes nothing is
+/// the one outcome this is meant to avoid.
+BlockColours coloursFor(int score) =>
+    BlockColours.all[(score ~/ kColourInterval) % BlockColours.all.length];
 
 /// The Block Blast palette for the current theme.
 BlockPalette blockPaletteOf(BuildContext context) =>

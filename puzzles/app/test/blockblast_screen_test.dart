@@ -519,6 +519,59 @@ void main() {
     });
   });
 
+  group('colours', () {
+    /// The block colours the board is actually dressed in.
+    List<Color> shownBy(WidgetTester tester) {
+      final themed = tester.widget<AnimatedTheme>(
+        find.byKey(const ValueKey<String>('block-colours')),
+      );
+      return themed.data.extension<BlockPalette>()!.pieces;
+    }
+
+    Future<void> open(WidgetTester tester, int score) async {
+      await tester.pumpWidget(
+        host(
+          gameWith(
+            board: BlockBoard.empty(),
+            hand: <BlockPiece?>[BlockPiece(single, 1), null, null],
+            score: score,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a new run wears the first set', (tester) async {
+      await open(tester, 0);
+      expect(shownBy(tester), BlockColours.all.first.pieces);
+    });
+
+    testWidgets('a run past the interval wears the next set', (tester) async {
+      await open(tester, kColourInterval);
+      expect(shownBy(tester), BlockColours.all[1].pieces);
+    });
+
+    testWidgets('a resumed run comes back in the colours it was left in', (
+      tester,
+    ) async {
+      await open(tester, kColourInterval * 2 + 40);
+      expect(shownBy(tester), BlockColours.all[2].pieces);
+    });
+
+    testWidgets('dressing the board leaves the other games alone', (
+      tester,
+    ) async {
+      await open(tester, 0);
+      final themed = tester.widget<AnimatedTheme>(
+        find.byKey(const ValueKey<String>('block-colours')),
+      );
+      // copyWith replaces the whole extension set rather than merging, so
+      // this is the assertion standing between Block Blast and quietly
+      // stripping Sudoku's palette out of the theme.
+      expect(themed.data.extension<SudokuPalette>(), isNotNull);
+    });
+  });
+
   testWidgets('a piece is described for a screen reader', (tester) async {
     final game = gameWith(
       board: BlockBoard.empty(),

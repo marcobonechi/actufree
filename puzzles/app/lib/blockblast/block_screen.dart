@@ -5,6 +5,7 @@ import 'package:blockblast_engine/blockblast_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 
+import '../theme.dart';
 import 'block_game.dart';
 import 'board_view.dart';
 import 'hand_tray.dart';
@@ -262,7 +263,9 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _game,
-          builder: (BuildContext context, _) => LayoutBuilder(
+          builder: (BuildContext context, _) => _Dressed(
+            score: _game.score,
+            child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final board = _boardSide(constraints);
               return DragTarget<int>(
@@ -313,7 +316,8 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
                   ],
                 ),
               );
-            },
+              },
+            ),
           ),
         ),
       ),
@@ -334,6 +338,42 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     final fromHeight = (constraints.maxHeight - headerHeight - padding) /
         (1 + trayShare + 0.05);
     return max(80, min(min(fromWidth, fromHeight), 520));
+  }
+}
+
+/// Puts the board in the colours a game on [score] is wearing.
+///
+/// The change is animated by [AnimatedTheme], which lerps theme extensions —
+/// so [BlockPalette.lerp], written for nothing more than Material's own
+/// light-to-dark transition, turns out to do the whole job.
+///
+/// This wraps the play area rather than the app, so only Block Blast's colours
+/// move. The rest of Actufree stays where it is.
+class _Dressed extends StatelessWidget {
+  const _Dressed({required this.score, required this.child});
+
+  final int score;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dressed = blockPaletteOf(
+      context,
+    ).copyWith(pieces: coloursFor(score).pieces);
+    // Everything else the theme carries is kept: handing copyWith only the
+    // new palette would quietly take Sudoku's with it, since it replaces the
+    // whole extension set rather than merging into it.
+    final extensions = theme.extensions.values
+        .where((ThemeExtension<dynamic> e) => e is! BlockPalette)
+        .toList()
+      ..add(dressed);
+    return AnimatedTheme(
+      key: const ValueKey<String>('block-colours'),
+      data: theme.copyWith(extensions: extensions),
+      duration: kColourDrift,
+      child: child,
+    );
   }
 }
 
