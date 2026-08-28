@@ -180,6 +180,23 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     );
   }
 
+  /// Works out the best way to play the hand and puts it on the board.
+  ///
+  /// A second press takes it back down, so the button is its own way out
+  /// rather than something the player has to make a move to be rid of.
+  void _onHint() {
+    if (_game.hint != null) {
+      _game.clearHint();
+      return;
+    }
+    if (_game.requestHint()) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text('Nothing left that fits anywhere.')),
+      );
+  }
+
   void _restart() {
     _announcedEnd = false;
     _game.restart(_seeds.nextInt(1 << 31));
@@ -252,6 +269,12 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
       appBar: AppBar(
         title: const Text('Block Blast'),
         actions: <Widget>[
+          IconButton(
+            key: const ValueKey<String>('hint'),
+            icon: const Icon(Icons.lightbulb_outline),
+            tooltip: 'Show the best way to play this hand',
+            onPressed: _onHint,
+          ),
           IconButton(
             key: const ValueKey<String>('restart'),
             icon: const Icon(Icons.restart_alt),

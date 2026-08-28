@@ -2,6 +2,7 @@ import 'package:blockblast_engine/blockblast_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
+import 'package:puzzles_app/blockblast/block_game.dart';
 import 'package:puzzles_app/blockblast/block_screen.dart';
 import 'package:puzzles_app/blockblast/board_view.dart';
 import 'package:puzzles_app/blockblast/carried_piece.dart';
@@ -569,6 +570,140 @@ void main() {
       // this is the assertion standing between Block Blast and quietly
       // stripping Sudoku's palette out of the theme.
       expect(themed.data.extension<SudokuPalette>(), isNotNull);
+    });
+  });
+
+  group('hint', () {
+    Finder hintButton() => find.byKey(const ValueKey<String>('hint'));
+
+    /// The controller behind the screen, via the board it is drawing.
+    BlockBlastGame controllerIn(WidgetTester tester) =>
+        tester.widget<BlockBoardView>(find.byType(BlockBoardView)).game;
+
+    testWidgets('the button offers a plan for the whole hand', (tester) async {
+      final game = gameWith(
+        board: BlockBoard.fromRows(<String>[
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '11111111',
+          '111111..',
+        ]),
+        hand: <BlockPiece?>[BlockPiece(domino, 1), BlockPiece(square, 2), null],
+      );
+      await tester.pumpWidget(host(game));
+      expect(controllerIn(tester).hint, isNull);
+
+      await tester.tap(hintButton());
+      await tester.pumpAndSettle();
+
+      final plan = controllerIn(tester).hint!;
+      expect(plan.moves, hasLength(2), reason: 'both pieces');
+      expect(plan.lines, greaterThanOrEqualTo(1));
+      expect(controllerIn(tester).hintSteps, hasLength(2));
+      expect(
+        controllerIn(tester).hintSteps.map((HintStep s) => s.order),
+        <int>[1, 2],
+      );
+    });
+
+    testWidgets('pressing it again takes the plan back down', (tester) async {
+      await tester.pumpWidget(host(BlockGame.newGame(5)));
+      await tester.tap(hintButton());
+      await tester.pumpAndSettle();
+      expect(controllerIn(tester).hint, isNotNull);
+
+      await tester.tap(hintButton());
+      await tester.pumpAndSettle();
+      expect(controllerIn(tester).hint, isNull);
+    });
+
+    testWidgets('picking a piece up puts the plan away', (tester) async {
+      final game = gameWith(
+        board: BlockBoard.empty(),
+        hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+      );
+      await tester.pumpWidget(host(game));
+      await tester.tap(hintButton());
+      await tester.pumpAndSettle();
+      expect(controllerIn(tester).hint, isNotNull);
+
+      await dragTo(tester, 0, square, const Coord(2, 2));
+      expect(controllerIn(tester).hint, isNull);
+      expect(find.text('4'), findsOneWidget, reason: 'the move still happened');
+    });
+
+    testWidgets('a plan can be played out exactly as it is shown', (
+      tester,
+    ) async {
+      // The point of the whole feature: following the numbers has to work.
+      final game = gameWith(
+        board: BlockBoard.fromRows(<String>[
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '........',
+          '11111111',
+          '111111..',
+        ]),
+        hand: <BlockPiece?>[BlockPiece(domino, 1), BlockPiece(square, 2), null],
+      );
+      await tester.pumpWidget(host(game));
+      await tester.tap(hintButton());
+      await tester.pumpAndSettle();
+
+      final plan = controllerIn(tester).hint!;
+      final shapes = <int, BlockShape>{
+        for (final move in plan.moves)
+          move.handIndex: game.hand[move.handIndex]!.shape,
+      };
+      for (final move in plan.moves) {
+        await dragTo(tester, move.handIndex, shapes[move.handIndex]!,
+            move.anchor);
+      }
+      expect(
+        find.text('${plan.points}'),
+        findsOneWidget,
+        reason: 'the score the plan promised',
+      );
+    });
+
+    testWidgets('a board with nowhere to go says so rather than nothing', (
+      tester,
+    ) async {
+      // Only reachable by dismissing the game-over dialog with the system
+      // back button, which Android allows and which leaves the player looking
+      // at a dead board. Pressing hint there should get an answer.
+      final game = gameWith(
+        board: BlockBoard.fromRows(<String>[
+          '1111111.',
+          '11111111',
+          '11111111',
+          '11111111',
+          '11111111',
+          '11111111',
+          '11111111',
+          '11111111',
+        ]),
+        hand: <BlockPiece?>[BlockPiece(domino, 1), null, null],
+      );
+      await tester.pumpWidget(host(game));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey<String>('game-over')), findsOneWidget);
+
+      final dialog = tester.element(find.byKey(const ValueKey<String>('game-over')));
+      Navigator.of(dialog).pop();
+      await tester.pumpAndSettle();
+
+      await tester.tap(hintButton());
+      await tester.pump();
+      expect(find.text('Nothing left that fits anywhere.'), findsOneWidget);
+      expect(controllerIn(tester).hint, isNull);
     });
   });
 

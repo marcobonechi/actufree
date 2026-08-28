@@ -83,6 +83,7 @@ class _BlockBoardViewState extends State<BlockBoardView>
           painter: _BoardPainter(
             board: widget.game.state.board,
             palette: palette,
+            hint: widget.game.hintSteps,
             wouldFill: widget.game.wouldFill,
             wouldClear: widget.game.wouldClear,
             carriedPaint: _carriedPaint,
@@ -106,6 +107,7 @@ class _BoardPainter extends CustomPainter {
   const _BoardPainter({
     required this.board,
     required this.palette,
+    required this.hint,
     required this.wouldFill,
     required this.wouldClear,
     required this.carriedPaint,
@@ -115,6 +117,7 @@ class _BoardPainter extends CustomPainter {
 
   final BlockBoard board;
   final BlockPalette palette;
+  final List<HintStep> hint;
   final Set<Coord> wouldFill;
   final Set<Coord> wouldClear;
   final int? carriedPaint;
@@ -142,6 +145,10 @@ class _BoardPainter extends CustomPainter {
         paintBlock(canvas, rect, palette.pieceColor(paint));
       }
     }
+
+    // The hint, under the drag: a player who picks a piece up has stopped
+    // reading it. Drawn before the ghost so a drag always wins the square.
+    if (hint.isNotEmpty) _paintHint(canvas, cell);
 
     // Lines the carried piece would complete, lit up underneath everything the
     // drag draws on top. This is the difference between finding a double and
@@ -197,10 +204,62 @@ class _BoardPainter extends CustomPainter {
     }
   }
 
+  /// Draws each step of the plan where it goes, numbered in playing order.
+  ///
+  /// Numbered rather than shown one at a time because the order is the whole
+  /// point: a plan usually works only because an earlier piece took a line
+  /// out and made room for a later one. A step can therefore sit on squares
+  /// that are still filled — they will not be by the time it is played.
+  void _paintHint(Canvas canvas, double cell) {
+    for (final step in hint) {
+      final color = palette.pieceColor(step.paint);
+      for (final coord in step.cells) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            cellRect(coord, cell).deflate(cell * kBlockInset),
+            Radius.circular(cell * kBlockRadius),
+          ),
+          Paint()..color = color.withValues(alpha: 0.55),
+        );
+      }
+      paintFootprintOutline(canvas, step.cells, cell, palette.ghost, cell * 0.1);
+
+      // The number goes on the step's own top-left square, which is always
+      // part of the shape and never wanders off into a hole in a concave one.
+      final head = step.cells.reduce(
+        (Coord a, Coord b) =>
+            b.row < a.row || (b.row == a.row && b.col < a.col) ? b : a,
+      );
+      final label = TextPainter(
+        text: TextSpan(
+          text: '${step.order}',
+          style: TextStyle(
+            color: palette.boardSurface,
+            fontSize: cell * 0.44,
+            fontWeight: FontWeight.w700,
+            height: 1,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final centre = cellRect(head, cell).center;
+      canvas.drawCircle(
+        centre,
+        cell * 0.30,
+        Paint()..color = palette.ghost,
+      );
+      label.paint(
+        canvas,
+        centre - Offset(label.width / 2, label.height / 2),
+      );
+    }
+  }
+
   @override
   bool shouldRepaint(_BoardPainter old) =>
       old.board != board ||
       old.palette != palette ||
+      old.hint != hint ||
       old.wouldFill != wouldFill ||
       old.wouldClear != wouldClear ||
       old.carriedPaint != carriedPaint ||

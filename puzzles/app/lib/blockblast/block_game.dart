@@ -1,6 +1,25 @@
 import 'package:blockblast_engine/blockblast_engine.dart';
 import 'package:flutter/foundation.dart';
 
+/// One step of a shown hint: where a piece goes, and how far into the plan.
+final class HintStep {
+  /// Records a step.
+  const HintStep({
+    required this.cells,
+    required this.paint,
+    required this.order,
+  });
+
+  /// The squares the piece would cover.
+  final Set<Coord> cells;
+
+  /// The colour of the piece going there.
+  final int paint;
+
+  /// Which step this is, counting from one.
+  final int order;
+}
+
 /// One game of Block Blast, and the drag in progress over it.
 ///
 /// The engine's [BlockGame] is immutable and knows only the rules; this holds
@@ -26,6 +45,7 @@ class BlockBlastGame extends ChangeNotifier {
   int _clearTick = 0;
   int _lastPoints = 0;
   int _lastLines = 0;
+  HandPlan? _hint;
 
   /// The game as the engine sees it.
   BlockGame get state => _state;
@@ -70,6 +90,47 @@ class BlockBlastGame extends ChangeNotifier {
   /// How many lines the last placement took out.
   int get lastLines => _lastLines;
 
+  /// The plan being shown, or `null` when no hint is up.
+  HandPlan? get hint => _hint;
+
+  /// The shown plan as something the board can draw.
+  ///
+  /// Later steps are worked out against the board as it will be by then, so a
+  /// step can land on squares that are filled now and will have been cleared
+  /// by the step before it. That is the plan being worth asking for rather
+  /// than a mistake, and the numbering is what makes it readable.
+  List<HintStep> get hintSteps {
+    final plan = _hint;
+    if (plan == null) return const <HintStep>[];
+    return <HintStep>[
+      for (var step = 0; step < plan.moves.length; step++)
+        if (_state.hand[plan.moves[step].handIndex] case final BlockPiece piece)
+          HintStep(
+            cells: piece.shape.at(plan.moves[step].anchor).toSet(),
+            paint: piece.paint,
+            order: step + 1,
+          ),
+    ];
+  }
+
+  /// Works out the best way to play the rest of the hand and shows it.
+  ///
+  /// Says whether there was anything to show: on a board with nowhere left to
+  /// put anything there is no plan, and the screen should say so rather than
+  /// appear to have ignored the button.
+  bool requestHint() {
+    _hint = HandPlanner.bestFor(_state);
+    notifyListeners();
+    return _hint != null;
+  }
+
+  /// Takes the hint back down.
+  void clearHint() {
+    if (_hint == null) return;
+    _hint = null;
+    notifyListeners();
+  }
+
   /// The piece in [index], or `null` when that slot has been played.
   BlockPiece? pieceAt(int index) => _state.hand[index];
 
@@ -86,6 +147,9 @@ class BlockBlastGame extends ChangeNotifier {
   void startDrag(int index) {
     if (_carrying == index) return;
     _carrying = index;
+    // The player is acting on it, or ignoring it. Either way it has done its
+    // job and would only be in the way of the piece now being carried.
+    _hint = null;
     _clearPreview();
     notifyListeners();
   }
@@ -133,6 +197,7 @@ class BlockBlastGame extends ChangeNotifier {
       return;
     }
     _state = result.game;
+    _hint = null;
     _landed = result.filled;
     _lastPoints = result.points;
     _lastLines = result.clear.lineCount;
@@ -157,6 +222,7 @@ class BlockBlastGame extends ChangeNotifier {
   void restart(int seed) {
     _state = BlockGame.newGame(seed);
     _carrying = null;
+    _hint = null;
     _landed = const <Coord>{};
     _clearing = const <Coord>{};
     _lastPoints = 0;

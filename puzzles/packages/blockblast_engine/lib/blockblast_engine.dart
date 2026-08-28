@@ -12,5 +12,6 @@ export 'src/dealer.dart';
 export 'src/game.dart';
 export 'src/piece.dart';
 export 'src/placement.dart';
+export 'src/planner.dart';
 export 'src/score.dart';
 export 'src/shape.dart';
