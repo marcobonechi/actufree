@@ -1,8 +1,10 @@
 import 'package:blockblast_engine/blockblast_engine.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'block_game.dart';
+import 'carried_piece.dart';
 import 'piece_view.dart';
 
 /// How far above the finger a carried piece rides, in board cells.
@@ -21,13 +23,21 @@ const double kCarryLift = 0.9;
 /// you are carrying is exactly the size of the hole you are looking for.
 class HandTray extends StatelessWidget {
   /// Draws [game]'s hand, sized against a board of [boardCellSize] cells.
-  const HandTray({required this.game, required this.boardCellSize, super.key});
+  const HandTray({
+    required this.game,
+    required this.boardCellSize,
+    required this.carryCorrection,
+    super.key,
+  });
 
   /// The game being played.
   final BlockBlastGame game;
 
   /// How big one cell of the board is.
   final double boardCellSize;
+
+  /// How far a carried piece is from the square it has snapped to.
+  final ValueListenable<Offset> carryCorrection;
 
   /// How big one block of a piece is while it sits in the tray.
   double get trayCellSize => boardCellSize / 2;
@@ -54,6 +64,7 @@ class HandTray extends StatelessWidget {
                 palette: palette,
                 boardCellSize: boardCellSize,
                 trayCellSize: trayCellSize,
+                carryCorrection: carryCorrection,
               ),
             ),
         ],
@@ -69,6 +80,7 @@ class _Slot extends StatelessWidget {
     required this.palette,
     required this.boardCellSize,
     required this.trayCellSize,
+    required this.carryCorrection,
     super.key,
   });
 
@@ -77,6 +89,7 @@ class _Slot extends StatelessWidget {
   final BlockPalette palette;
   final double boardCellSize;
   final double trayCellSize;
+  final ValueListenable<Offset> carryCorrection;
 
   @override
   Widget build(BuildContext context) {
@@ -102,10 +115,11 @@ class _Slot extends StatelessWidget {
           piece.shape.width * boardCellSize / 2,
           piece.shape.height * boardCellSize + kCarryLift * boardCellSize,
         ),
-        feedback: PieceView(
+        feedback: CarriedPiece(
           shape: piece.shape,
           color: palette.pieceColor(piece.paint),
           cellSize: boardCellSize,
+          correction: carryCorrection,
         ),
         childWhenDragging: const SizedBox.expand(),
         onDragStarted: () => game.startDrag(index),

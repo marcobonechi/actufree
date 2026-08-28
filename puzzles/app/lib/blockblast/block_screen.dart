@@ -73,6 +73,14 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     ..addListener(_onGameChanged);
   final GlobalKey _boardKey = GlobalKey();
   final Random _seeds = Random();
+
+  /// How far the carried piece is from the square it has snapped to.
+  ///
+  /// Kept here rather than on the game: it is a fact about where the board
+  /// happens to be laid out on this screen, which is nothing the game should
+  /// have an opinion about.
+  final ValueNotifier<Offset> _carryCorrection =
+      ValueNotifier<Offset>(Offset.zero);
   late int _best = widget.best;
   bool _announcedEnd = false;
 
@@ -89,6 +97,7 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     _game
       ..removeListener(_onGameChanged)
       ..dispose();
+    _carryCorrection.dispose();
     super.dispose();
   }
 
@@ -199,6 +208,29 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     if (start ?? false) _restart();
   }
 
+  /// Follows the carried piece to [globalTopLeft], the top-left corner the
+  /// pointer has it at.
+  void _carryTo(Offset globalTopLeft) {
+    _game.updateDrag(_anchorFor(globalTopLeft));
+    _carryCorrection.value = _correctionFor(globalTopLeft);
+  }
+
+  /// How far the snapped square is from where the pointer has the piece.
+  ///
+  /// [Offset.zero] when the piece has not snapped anywhere, which leaves it
+  /// following the pointer exactly — it is not going to land, so it should not
+  /// pretend to be lining up.
+  Offset _correctionFor(Offset globalTopLeft) {
+    final settled = _game.anchor;
+    final box = _boardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (settled == null || box == null || !box.hasSize) return Offset.zero;
+    final cell = box.size.width / boardSize;
+    final target = box.localToGlobal(
+      Offset(settled.col * cell, settled.row * cell),
+    );
+    return target - globalTopLeft;
+  }
+
   /// The board square that [globalTopLeft] — the top-left corner of the piece
   /// being carried — is nearest to, or `null` when the board is not laid out.
   ///
@@ -236,12 +268,15 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
               return DragTarget<int>(
                 onWillAcceptWithDetails: (_) => true,
                 onMove: (DragTargetDetails<int> details) =>
-                    _game.updateDrag(_anchorFor(details.offset)),
-                onLeave: (_) => _game.updateDrag(null),
+                    _carryTo(details.offset),
+                onLeave: (_) {
+                  _game.updateDrag(null);
+                  _carryCorrection.value = Offset.zero;
+                },
                 onAcceptWithDetails: (DragTargetDetails<int> details) {
-                  _game
-                    ..updateDrag(_anchorFor(details.offset))
-                    ..drop();
+                  _carryTo(details.offset);
+                  _game.drop();
+                  _carryCorrection.value = Offset.zero;
                 },
                 builder: (BuildContext context, _, _) => Column(
                   children: <Widget>[
@@ -268,6 +303,7 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
                               HandTray(
                                 game: _game,
                                 boardCellSize: board / boardSize,
+                                carryCorrection: _carryCorrection,
                               ),
                             ],
                           ),

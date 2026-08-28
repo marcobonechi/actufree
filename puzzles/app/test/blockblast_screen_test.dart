@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 import 'package:puzzles_app/blockblast/block_screen.dart';
 import 'package:puzzles_app/blockblast/board_view.dart';
+import 'package:puzzles_app/blockblast/carried_piece.dart';
 import 'package:puzzles_app/blockblast/hand_tray.dart';
+import 'package:puzzles_app/blockblast/piece_view.dart';
 import 'package:puzzles_app/theme.dart';
 
 import 'blockblast_controller_test.dart' show gameWith;
@@ -390,6 +392,131 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('1'), findsOneWidget, reason: 'the piece never lifted');
+  });
+
+  group('carrying', () {
+    /// Picks up slot 0 and holds it with its top-left [offset] from the board.
+    Future<TestGesture> carry(
+      WidgetTester tester,
+      BlockShape shape,
+      Offset offset,
+    ) async {
+      final board = tester.getRect(find.byType(BlockBoardView));
+      final gesture = await tester.startGesture(tester.getCenter(slot(0)));
+      await tester.pump();
+      await gesture.moveTo(
+        board.topLeft +
+            offset +
+            Offset(
+              shape.width *
+                  (board.width / boardSize) /
+                  2,
+              shape.height * (board.width / boardSize) +
+                  kCarryLift * (board.width / boardSize),
+            ),
+      );
+      await tester.pump();
+      // Long enough for the settle to finish, so the assertion is about where
+      // the piece came to rest rather than where it happened to be passing.
+      await tester.pump(kSettleDuration + const Duration(milliseconds: 20));
+      return gesture;
+    }
+
+    testWidgets('the piece settles onto the square it would land on', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          gameWith(
+            board: BlockBoard.empty(),
+            hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          ),
+        ),
+      );
+      final board = tester.getRect(find.byType(BlockBoardView));
+      final cell = board.width / boardSize;
+
+      // Held a third of a cell off the grid in both directions. Tracking the
+      // pointer would leave it there; snapping pulls it onto the square.
+      final gesture = await carry(
+        tester,
+        square,
+        Offset(2 * cell + cell / 3, 2 * cell + cell / 3),
+      );
+
+      expect(
+        tester.getTopLeft(find.byType(PieceView)),
+        offsetMoreOrLessEquals(
+          board.topLeft + Offset(2 * cell, 2 * cell),
+          epsilon: 0.5,
+        ),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a piece with nowhere to land stays under the pointer', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          gameWith(
+            board: BlockBoard.fromRows(<String>[
+              '11111111',
+              '11111111',
+              '11111111',
+              '11111111',
+              '........',
+              '........',
+              '........',
+              '........',
+            ]),
+            hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          ),
+        ),
+      );
+      final board = tester.getRect(find.byType(BlockBoardView));
+      final cell = board.width / boardSize;
+
+      // Over row 2, which is full: nothing to snap to, so no pretending.
+      final held = Offset(2 * cell + cell / 3, 2 * cell + cell / 3);
+      final gesture = await carry(tester, square, held);
+
+      expect(
+        tester.getTopLeft(find.byType(PieceView)),
+        offsetMoreOrLessEquals(board.topLeft + held, epsilon: 0.5),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('snapping does not change where the piece is placed', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          gameWith(
+            board: BlockBoard.empty(),
+            hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          ),
+        ),
+      );
+      final board = tester.getRect(find.byType(BlockBoardView));
+      final cell = board.width / boardSize;
+      final gesture = await carry(
+        tester,
+        square,
+        Offset(2 * cell + cell / 3, 2 * cell + cell / 3),
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(find.text('4'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('game-over')),
+        findsNothing,
+      );
+    });
   });
 
   testWidgets('a piece is described for a screen reader', (tester) async {
