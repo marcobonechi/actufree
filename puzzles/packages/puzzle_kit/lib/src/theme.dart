@@ -12,7 +12,7 @@ ThemeData buildTheme({
   List<ThemeExtension<dynamic>> extensions =
       const <ThemeExtension<dynamic>>[],
 }) {
-  return ThemeData(
+  final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
@@ -30,7 +30,61 @@ ThemeData buildTheme({
       scrolledUnderElevation: 0,
     ),
   );
+  // Tuned from the resolved theme rather than passed in, so it is applied on
+  // top of whichever face the platform supplies.
+  return base.copyWith(textTheme: tunedTextTheme(base.textTheme));
 }
+
+/// [base] with a hand set weight and tracking.
+///
+/// The app ships no font of its own — Android draws it in Roboto and iOS in
+/// San Francisco, each of which is the right thing on its own platform. What
+/// it can do is choose how that face is *set*, and that is most of what
+/// separates typography somebody picked from typography nobody touched.
+///
+/// Two changes, both aimed at the same tell. Material's scale sets every
+/// display and headline size at regular weight, so a screen's largest text
+/// carries no more emphasis than its body text and the hierarchy has to be
+/// done entirely with size. And it tracks those sizes at zero, where large
+/// text wants tightening — letters set at 36pt sit further apart, optically,
+/// than the same letters at 14pt.
+///
+/// Body sizes keep their weight and lose only a little of their tracking:
+/// Material's positive tracking there is doing real work at small sizes, and
+/// tightening it would cost legibility for a look.
+TextTheme tunedTextTheme(TextTheme base) {
+  TextStyle? weigh(TextStyle? style, FontWeight weight, double tracking) =>
+      style?.copyWith(fontWeight: weight, letterSpacing: tracking);
+
+  return base.copyWith(
+    displayLarge: weigh(base.displayLarge, FontWeight.w700, -1),
+    displayMedium: weigh(base.displayMedium, FontWeight.w700, -0.8),
+    displaySmall: weigh(base.displaySmall, FontWeight.w700, -0.6),
+    headlineLarge: weigh(base.headlineLarge, FontWeight.w600, -0.5),
+    headlineMedium: weigh(base.headlineMedium, FontWeight.w600, -0.4),
+    headlineSmall: weigh(base.headlineSmall, FontWeight.w600, -0.3),
+    titleLarge: weigh(base.titleLarge, FontWeight.w600, -0.2),
+    titleMedium: weigh(base.titleMedium, FontWeight.w600, 0),
+    titleSmall: weigh(base.titleSmall, FontWeight.w600, 0),
+    labelLarge: weigh(base.labelLarge, FontWeight.w600, 0),
+    labelMedium: weigh(base.labelMedium, FontWeight.w600, 0.2),
+    labelSmall: weigh(base.labelSmall, FontWeight.w600, 0.2),
+    bodyLarge: base.bodyLarge?.copyWith(letterSpacing: 0.1),
+    bodyMedium: base.bodyMedium?.copyWith(letterSpacing: 0.1),
+    bodySmall: base.bodySmall?.copyWith(letterSpacing: 0.1),
+  );
+}
+
+/// Digits that hold their width, whatever digits they are.
+///
+/// For a number that changes while the player is looking at it. Proportional
+/// figures are drawn to their own widths — a 1 is narrower than a 0 — so a
+/// score counting up shuffles sideways on every clear, and a column of counts
+/// under a number pad fails to line up. Both Roboto and San Francisco carry
+/// the tabular set; this asks for it.
+TextStyle? tabularFigures(TextStyle? style) => style?.copyWith(
+      fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+    );
 
 /// The wash that sits behind every screen.
 ///

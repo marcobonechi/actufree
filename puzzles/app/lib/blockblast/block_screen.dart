@@ -401,12 +401,14 @@ class _Header extends StatelessWidget {
               Text(
                 '${game.score}',
                 key: const ValueKey<String>('score'),
-                style: theme.textTheme.displaySmall,
+                style: tabularFigures(theme.textTheme.displaySmall),
               ),
               Text(
                 best > 0 ? 'Best $best' : 'No best yet',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: tabularFigures(
+                  theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
@@ -481,9 +483,11 @@ class _ClearFlashState extends State<_ClearFlash>
                 children: <Widget>[
                   Text(
                     '+${widget.game.lastPoints}',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
+                    style: tabularFigures(
+                      theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   if (_names[lines] != null)
