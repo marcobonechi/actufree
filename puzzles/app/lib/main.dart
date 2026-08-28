@@ -45,6 +45,11 @@ class ActufreeApp extends StatelessWidget {
       builder: (BuildContext context, _) => MaterialApp(
         title: 'Actufree',
         debugShowCheckedModeBanner: false,
+        // One backdrop behind the whole app rather than one per screen: it
+        // stays put across route transitions, which is what makes it read as
+        // the app's surface rather than as decoration on a particular page.
+        builder: (BuildContext context, Widget? child) =>
+            PuzzleBackdrop(child: child ?? const SizedBox.shrink()),
         theme: actufreeTheme(Brightness.light),
         darkTheme: actufreeTheme(Brightness.dark),
         themeMode: settings.themeMode,
