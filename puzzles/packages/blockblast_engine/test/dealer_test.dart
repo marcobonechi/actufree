@@ -44,7 +44,7 @@ void main() {
     }
   });
 
-  test('at least one dealt piece fits, however little room is left', () {
+  test('every dealt piece fits, however little room is left', () {
     // Boards with a single gap of a given size: the deal has to find the
     // shapes small enough to use it, redrawing or substituting as needed.
     for (var gap = 1; gap <= 4; gap++) {
@@ -60,16 +60,18 @@ void main() {
       ]);
       for (var seed = 0; seed < 200; seed++) {
         final deal = Dealer.deal(board, seed);
-        expect(
-          deal.pieces.any((BlockPiece p) => board.fitsAnywhere(p.shape)),
-          isTrue,
-          reason: 'gap of $gap, seed $seed: nothing in ${deal.pieces} fits',
-        );
+        for (final piece in deal.pieces) {
+          expect(
+            board.fitsAnywhere(piece.shape),
+            isTrue,
+            reason: 'gap of $gap, seed $seed: ${piece.shape} does not fit',
+          );
+        }
       }
     }
   });
 
-  test('a board with one empty cell is still dealt something playable', () {
+  test('a board with one empty cell is dealt three 1x1s', () {
     final board = BlockBoard.fromRows(<String>[
       '1111111.',
       '11111111',
@@ -81,12 +83,11 @@ void main() {
       '11111111',
     ]);
     for (var seed = 0; seed < 200; seed++) {
-      final deal = Dealer.deal(board, seed);
-      final playable =
-          deal.pieces.where((BlockPiece p) => board.fitsAnywhere(p.shape));
-      expect(playable, isNotEmpty);
-      // The only shape that fits one cell is the 1x1.
-      expect(playable.every((BlockPiece p) => p.shape.size == 1), isTrue);
+      // The only shape that fits one cell is the 1x1, and every piece has to
+      // fit, so there is exactly one hand this board can be dealt.
+      for (final piece in Dealer.deal(board, seed).pieces) {
+        expect(piece.shape.size, 1, reason: 'seed $seed');
+      }
     }
   });
 

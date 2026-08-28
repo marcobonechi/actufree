@@ -26,8 +26,8 @@ final class Deal {
 /// than as the internal state of a [Random], and what makes a bad run
 /// reproducible from its opening seed.
 abstract final class Dealer {
-  /// How many times a hand is redrawn in the hope of finding one that fits
-  /// before a piece is replaced outright.
+  /// How many times a piece is redrawn in the hope of finding one that fits
+  /// before it is replaced outright.
   ///
   /// A few honest attempts keep the usual deal untouched by the fairness rule;
   /// the replacement below is the backstop for a board so full that redrawing
@@ -36,45 +36,46 @@ abstract final class Dealer {
 
   /// Deals [handSize] pieces for [board] from [seed].
   ///
-  /// At least one of them fits somewhere. A deal that could not be played at
-  /// all would end the game on the deal rather than on anything the player
-  /// did, which is the one way of losing nobody learns from.
+  /// Every one of them fits somewhere. Being handed a shape that was never
+  /// playable costs the player a third of the hand for reasons they had no
+  /// part in, which is not a thing anyone can learn to play around.
   ///
-  /// Note the guarantee is only about the moment of dealing: playing the piece
-  /// that fit can easily leave the other two with nowhere to go, and that is
-  /// the game.
+  /// The guarantee covers the moment of dealing and nothing past it. Where the
+  /// first piece goes decides whether the second still has room, and often it
+  /// does not — that is the game, and no rule here should try to prevent it.
+  /// Measured over a few thousand runs, most games end with a piece still in
+  /// hand that fitted perfectly well when it was dealt.
   static Deal deal(BlockBoard board, int seed) {
     final random = Random(seed);
-    var pieces = _draw(random);
-    for (var attempt = 0;
-        attempt < _redrawAttempts && !_anyFits(board, pieces);
-        attempt++) {
-      pieces = _draw(random);
-    }
-    if (!_anyFits(board, pieces)) {
-      pieces = List<BlockPiece>.of(pieces);
-      pieces[random.nextInt(handSize)] = BlockPiece(
-        _shapeThatFits(board, random),
-        1 + random.nextInt(paintCount),
-      );
-    }
+    final pieces = <BlockPiece>[
+      for (var i = 0; i < handSize; i++) _drawThatFits(board, random),
+    ];
     return Deal(
       List<BlockPiece>.unmodifiable(pieces),
       random.nextInt(1 << 31),
     );
   }
 
-  static List<BlockPiece> _draw(Random random) => <BlockPiece>[
-        for (var i = 0; i < handSize; i++)
-          BlockPiece(
-            ShapeCatalogue.entryAt(random.nextInt(ShapeCatalogue.totalWeight))
-                .shape,
-            1 + random.nextInt(paintCount),
-          ),
-      ];
-
-  static bool _anyFits(BlockBoard board, List<BlockPiece> pieces) =>
-      pieces.any((BlockPiece piece) => board.fitsAnywhere(piece.shape));
+  /// One piece that fits on [board].
+  ///
+  /// Drawn honestly first, so on an open board — which is most of them — the
+  /// catalogue's weights decide the piece and this costs one fit check. Only a
+  /// board with little room left falls through to being handed something that
+  /// works.
+  static BlockPiece _drawThatFits(BlockBoard board, Random random) {
+    for (var attempt = 0; attempt < _redrawAttempts; attempt++) {
+      final shape = ShapeCatalogue.entryAt(
+        random.nextInt(ShapeCatalogue.totalWeight),
+      ).shape;
+      if (board.fitsAnywhere(shape)) {
+        return BlockPiece(shape, 1 + random.nextInt(paintCount));
+      }
+    }
+    return BlockPiece(
+      _shapeThatFits(board, random),
+      1 + random.nextInt(paintCount),
+    );
+  }
 
   /// A shape that fits on [board], chosen by weight from those that do.
   ///
