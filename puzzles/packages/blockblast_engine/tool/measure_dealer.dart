@@ -1,4 +1,5 @@
-// Measures how often a dealt hand runs out of playable pieces.
+// Measures how a run actually goes: how fast the board fills, how often a
+// hand can take a line out, and whether the board is ever swept clean.
 //
 // Run with: dart run tool/measure_dealer.dart
 import 'dart:math';
@@ -35,69 +36,71 @@ List<(int, Coord)> moves(BlockGame game) => <(int, Coord)>[
   return legal[random.nextInt(legal.length)];
 }
 
-void main() {
-  const games = 1500;
+void main(List<String> args) {
+  final games = args.isEmpty ? 800 : int.parse(args.first);
   for (final player in <(String, (int, Coord) Function(BlockGame, Random))>[
     ('careless', careless),
     ('greedy', greedy),
   ]) {
     final random = Random(7);
-    var moveCount = 0;
+    final lengths = <int>[];
     var scoreTotal = 0;
+    var cellsPlaced = 0;
+    var cellsCleared = 0;
+    var linesCleared = 0;
     var deals = 0;
-    final fitAtDeal = <int, int>{0: 0, 1: 0, 2: 0, 3: 0};
-    final leftOver = <int, int>{0: 0, 1: 0, 2: 0, 3: 0};
-    var handsPlayedOut = 0;
-    var handsAbandoned = 0;
+    var dealsWithAClearer = 0;
+    var dealsAllClearers = 0;
+    var sweeps = 0;
+    var fillSum = 0.0;
+    var fillSamples = 0;
 
     for (var seed = 0; seed < games; seed++) {
       var game = BlockGame.newGame(seed);
-      var played = 0;
-      deals++;
-      fitAtDeal[game.remaining
-          .where((BlockPiece p) => game.board.fitsAnywhere(p.shape))
-          .length] = fitAtDeal[game.remaining
-              .where((BlockPiece p) => game.board.fitsAnywhere(p.shape))
-              .length]! +
-          1;
+      var sweptThisGame = false;
+      var moveCount = 0;
 
+      void noteDeal(BlockGame g) {
+        deals++;
+        final clearers =
+            g.remaining.where((BlockPiece p) => g.board.canClearWith(p.shape));
+        if (clearers.isNotEmpty) dealsWithAClearer++;
+        if (clearers.length == handSize) dealsAllClearers++;
+      }
+
+      noteDeal(game);
       while (!game.isOver) {
         final move = player.$2(game, random);
         final before = game;
-        game = (game.place(move.$1, move.$2) as PlacementAccepted).game;
+        final result = before.place(move.$1, move.$2) as PlacementAccepted;
+        cellsPlaced += before.hand[move.$1]!.shape.size;
+        cellsCleared += result.clear.cells.length;
+        linesCleared += result.clear.lineCount;
+        game = result.game;
         moveCount++;
-        played++;
-        // A new hand arrived: count how many of it fits the board it landed on.
-        if (game.remaining.length == handSize && before.remaining.length == 1) {
-          deals++;
-          handsPlayedOut++;
-          played = 0;
-          final fits = game.remaining
-              .where((BlockPiece p) => game.board.fitsAnywhere(p.shape))
-              .length;
-          fitAtDeal[fits] = fitAtDeal[fits]! + 1;
-        }
+        fillSum += game.board.filledCount / cellCount;
+        fillSamples++;
+        if (game.board.isEmpty) sweptThisGame = true;
+        if (result.dealt) noteDeal(game);
       }
-      if (played > 0) handsAbandoned++;
-      leftOver[game.remaining.length] = leftOver[game.remaining.length]! + 1;
+      if (sweptThisGame) sweeps++;
+      lengths.add(moveCount);
       scoreTotal += game.score;
     }
 
-    print('--- ${player.$1}');
-    print('  moves per game        ${(moveCount / games).toStringAsFixed(1)}');
-    print('  score per game        ${(scoreTotal / games).toStringAsFixed(0)}');
-    print('  hands dealt           $deals');
-    for (final n in <int>[3, 2, 1]) {
-      final pct = 100 * fitAtDeal[n]! / deals;
-      print('  hands where $n of 3 fit when dealt   '
-          '${pct.toStringAsFixed(1)}%');
-    }
-    for (final n in <int>[2, 1, 0]) {
-      final pct = 100 * leftOver[n]! / games;
-      print('  games ending with $n pieces in hand  '
-          '${pct.toStringAsFixed(1)}%');
-    }
-    print('  hands played out fully  $handsPlayedOut');
-    print('  runs ending mid-hand    $handsAbandoned');
+    lengths.sort();
+    String pct(num n, num of) => '${(100 * n / of).toStringAsFixed(1)}%';
+    print('--- ${player.$1}  ($games games)');
+    print('  moves   mean ${(lengths.reduce((a, b) => a + b) / games).toStringAsFixed(1)}'
+        '   median ${lengths[games ~/ 2]}'
+        '   p90 ${lengths[(games * 0.9).floor()]}');
+    print('  score   mean ${(scoreTotal / games).toStringAsFixed(0)}');
+    print('  cells   placed/hand ${(3 * cellsPlaced / (deals * handSize)).toStringAsFixed(1)}'
+        '   cleared/hand ${(3 * cellsCleared / (deals * handSize)).toStringAsFixed(1)}');
+    print('  lines   per game ${(linesCleared / games).toStringAsFixed(1)}');
+    print('  board   average fill ${pct(fillSum, fillSamples)}');
+    print('  hands with a piece that can clear   ${pct(dealsWithAClearer, deals)}');
+    print('  hands where all three can clear     ${pct(dealsAllClearers, deals)}');
+    print('  games that swept the board clean    ${pct(sweeps, games)}');
   }
 }

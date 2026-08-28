@@ -34,6 +34,36 @@ abstract final class Dealer {
   /// is unlikely to help.
   static const int _redrawAttempts = 8;
 
+  /// How full the board has to be before the deal starts looking for pieces
+  /// that can take a line out.
+  ///
+  /// Below this the player has room and does not need the help; a deal that
+  /// handed out line-clearers on an open board would be playing the game for
+  /// them.
+  static const double assistFloor = 0.10;
+
+  /// The fill at which the deal is helping as hard as it ever will.
+  ///
+  /// Well short of a full board, because a full board is not where these
+  /// games are lost. Measured over a few thousand runs a board sits around
+  /// 40% full for almost all of its life and ends when what is left is jammed
+  /// rather than when it runs out of space — so a curve that only opened up
+  /// near 100% would spend the whole game switched off.
+  static const double assistFull = 0.45;
+
+  /// How often the deal goes looking, once [assistFull] is reached.
+  ///
+  /// Short of 1 on purpose. Even in trouble a hand should sometimes be
+  /// awkward, or the ending stops being something the player can lose.
+  static const double assistCeiling = 0.9;
+
+  /// How many candidates a looking deal weighs up before choosing.
+  ///
+  /// Rejection sampling rather than ranking the whole catalogue: it keeps the
+  /// catalogue's own weights intact — a piece still has to come up to be
+  /// chosen — and costs a handful of checks rather than sixty.
+  static const int _looks = 8;
+
   /// Deals [handSize] pieces for [board] from [seed].
   ///
   /// Every one of them fits somewhere. Being handed a shape that was never
@@ -48,12 +78,47 @@ abstract final class Dealer {
   static Deal deal(BlockBoard board, int seed) {
     final random = Random(seed);
     final pieces = <BlockPiece>[
-      for (var i = 0; i < handSize; i++) _drawThatFits(board, random),
+      for (var i = 0; i < handSize; i++) _drawFor(board, random),
     ];
     return Deal(
       List<BlockPiece>.unmodifiable(pieces),
       random.nextInt(1 << 31),
     );
+  }
+
+  /// How likely the deal is to go looking for a line-clearer on [board].
+  ///
+  /// Zero on an open board, rising with how full it is. The player who has
+  /// packed themselves into a corner is the one who needs a way out, and the
+  /// player with half a board free is not.
+  static double assistChance(BlockBoard board) {
+    final pressure = board.filledCount / cellCount;
+    if (pressure <= assistFloor) return 0;
+    if (pressure >= assistFull) return assistCeiling;
+    return (pressure - assistFloor) / (assistFull - assistFloor) *
+        assistCeiling;
+  }
+
+  /// One piece for [board]: usually just the next thing that fits, and on a
+  /// crowded board often the most useful of several.
+  ///
+  /// The looking is what turns "this piece goes somewhere" into "this piece
+  /// takes a line out". It stops early on a piece worth two lines, because
+  /// nothing found later would beat it and a crowded board is where the time
+  /// matters.
+  static BlockPiece _drawFor(BlockBoard board, Random random) {
+    var best = _drawThatFits(board, random);
+    if (random.nextDouble() >= assistChance(board)) return best;
+    var bestLines = board.bestClearFor(best.shape);
+    for (var look = 1; look < _looks && bestLines < 2; look++) {
+      final candidate = _drawThatFits(board, random);
+      final lines = board.bestClearFor(candidate.shape);
+      if (lines > bestLines) {
+        best = candidate;
+        bestLines = lines;
+      }
+    }
+    return best;
   }
 
   /// One piece that fits on [board].

@@ -2,6 +2,7 @@ import 'package:blockblast_engine/blockblast_engine.dart';
 import 'package:test/test.dart';
 
 void main() {
+  final single = BlockShape.fromRows(<String>['#']);
   final domino = BlockShape.fromRows(<String>['##']);
   final square = BlockShape.fromRows(<String>['##', '##']);
 
@@ -159,6 +160,120 @@ void main() {
     expect(clear.isEmpty, isTrue);
     expect(clear.lineCount, 0);
     expect(clear.board, board);
+  });
+
+  group('bestClearFor', () {
+    test('an empty board offers nothing to clear', () {
+      final board = BlockBoard.empty();
+      for (final shape in ShapeCatalogue.shapes) {
+        expect(board.bestClearFor(shape), 0, reason: '$shape');
+        expect(board.canClearWith(shape), isFalse);
+      }
+    });
+
+    test('a row one cell short is clearable by a 1x1 and nothing bigger', () {
+      final board = BlockBoard.fromRows(<String>[
+        '1111111.',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+      ]);
+      expect(board.bestClearFor(single), 1);
+      // The domino reaches the gap but hangs off the end of the row, so it
+      // fits nowhere that completes it.
+      expect(board.bestClearFor(domino), 0);
+      expect(board.canClearWith(single), isTrue);
+      expect(board.canClearWith(domino), isFalse);
+    });
+
+    test('a row two cells short needs the piece that spans both', () {
+      final board = BlockBoard.fromRows(<String>[
+        '111111..',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+        '........',
+      ]);
+      expect(board.bestClearFor(domino), 1);
+      // A single fills one of the two and completes nothing.
+      expect(board.bestClearFor(single), 0);
+    });
+
+    test('it counts a crossing row and column as two', () {
+      final board = BlockBoard.fromRows(<String>[
+        '.1111111',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+      ]);
+      expect(board.bestClearFor(single), 2);
+    });
+
+    test('it reports the best placement, not the first', () {
+      // The 1x1 clears nothing at most squares and two lines at r1c1, and the
+      // answer has to be the two.
+      final board = BlockBoard.fromRows(<String>[
+        '.1111111',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+        '.1......',
+      ]);
+      expect(board.bestClearFor(single), 2);
+      expect(board.anchorsFor(single).length, greaterThan(1));
+    });
+
+    test('it agrees with actually placing the piece', () {
+      // The cheap arithmetic has to match what clearFullLines really does.
+      for (var seed = 0; seed < 40; seed++) {
+        var game = BlockGame.newGame(seed);
+        while (!game.isOver) {
+          for (final piece in game.remaining) {
+            var actual = 0;
+            for (final anchor in game.board.anchorsFor(piece.shape)) {
+              final lines = game.board
+                  .withShape(piece.shape, anchor, piece.paint)
+                  .clearFullLines()
+                  .lineCount;
+              if (lines > actual) actual = lines;
+            }
+            expect(
+              game.board.bestClearFor(piece.shape),
+              actual,
+              reason: 'seed $seed, ${piece.shape}',
+            );
+          }
+          final piece = game.remaining.first;
+          final index = game.hand.indexOf(piece);
+          final anchors = game.board.anchorsFor(piece.shape);
+          if (anchors.isEmpty) {
+            final other = game.hand.indexWhere(
+              (BlockPiece? p) =>
+                  p != null && game.board.fitsAnywhere(p.shape),
+            );
+            game = (game.place(other, game.board.anchorsFor(
+              game.hand[other]!.shape,
+            ).first) as PlacementAccepted).game;
+          } else {
+            game = (game.place(index, anchors.first) as PlacementAccepted).game;
+          }
+        }
+      }
+    });
   });
 
   test('a board round-trips through JSON', () {

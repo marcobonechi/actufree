@@ -141,6 +141,48 @@ final class BlockBoard {
     return false;
   }
 
+  /// The most lines a single placement of [shape] could take out, or zero
+  /// when no placement of it clears anything.
+  ///
+  /// Answers "could this piece clear a line if the player found the right
+  /// square" without building a board per candidate. Counts how full each row
+  /// and column already is, then asks what each anchor would add — which is
+  /// cheap enough to run over the whole catalogue every time a piece is dealt.
+  int bestClearFor(BlockShape shape) {
+    final rowFill = List<int>.filled(boardSize, 0);
+    final colFill = List<int>.filled(boardSize, 0);
+    for (var index = 0; index < cellCount; index++) {
+      if (_cells[index] != 0) {
+        rowFill[index ~/ boardSize]++;
+        colFill[index % boardSize]++;
+      }
+    }
+    final addedRow = List<int>.filled(boardSize, 0);
+    final addedCol = List<int>.filled(boardSize, 0);
+    var best = 0;
+    for (var row = 0; row <= boardSize - shape.height; row++) {
+      for (var col = 0; col <= boardSize - shape.width; col++) {
+        if (!fits(shape, Coord(row, col))) continue;
+        addedRow.fillRange(0, boardSize, 0);
+        addedCol.fillRange(0, boardSize, 0);
+        for (final cell in shape.cells) {
+          addedRow[row + cell.row]++;
+          addedCol[col + cell.col]++;
+        }
+        var lines = 0;
+        for (var i = 0; i < boardSize; i++) {
+          if (rowFill[i] + addedRow[i] == boardSize) lines++;
+          if (colFill[i] + addedCol[i] == boardSize) lines++;
+        }
+        if (lines > best) best = lines;
+      }
+    }
+    return best;
+  }
+
+  /// Whether some placement of [shape] would take out at least one line.
+  bool canClearWith(BlockShape shape) => bestClearFor(shape) > 0;
+
   /// This board with [shape] dropped at [anchor] in [paint].
   ///
   /// Throws when it does not fit; ask [fits] first. A placement that silently

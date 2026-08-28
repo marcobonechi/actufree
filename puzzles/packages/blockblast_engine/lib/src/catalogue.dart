@@ -19,9 +19,11 @@ final class CataloguedShape {
 
 /// Every shape that can be dealt.
 ///
-/// Weights lean towards the small and awkward middle of the range. The 1x1 is
-/// deliberately rare — it fits anywhere, so a common one would let a player
-/// dig out of any corner and the board would never close in.
+/// Weights lean towards the small and awkward middle of the range. The two
+/// ends are both kept rare, for opposite reasons: the 1x1 fits anywhere, so a
+/// common one would let a player dig out of any corner, and the 9-cell block
+/// needs a third of the board free, so a common one would end runs on the
+/// deal rather than on anything the player did.
 abstract final class ShapeCatalogue {
   /// Every dealable shape, each with its weight.
   static final List<CataloguedShape> entries = List<CataloguedShape>.unmodifiable(
@@ -92,22 +94,22 @@ BlockShape _rotate(BlockShape shape) => BlockShape(
 
 final List<_Family> _families = <_Family>[
   // The rescue piece. Rare on purpose — see the class doc.
-  _Family(BlockShape.fromRows(<String>['#']), 1),
+  _Family(BlockShape.fromRows(<String>['#']), 2),
 
   // Bars. Long ones are rare: a 1x5 needs five in a row, and a hand of three
   // of them is a very short game.
-  _Family(BlockShape.fromRows(<String>['##']), 4),
-  _Family(BlockShape.fromRows(<String>['###']), 4),
+  _Family(BlockShape.fromRows(<String>['##']), 6),
+  _Family(BlockShape.fromRows(<String>['###']), 5),
   _Family(BlockShape.fromRows(<String>['####']), 3),
   _Family(BlockShape.fromRows(<String>['#####']), 2),
 
   // Blocks.
   _Family(BlockShape.fromRows(<String>['##', '##']), 5),
-  _Family(BlockShape.fromRows(<String>['###', '###']), 3),
-  _Family(BlockShape.fromRows(<String>['###', '###', '###']), 2),
+  _Family(BlockShape.fromRows(<String>['###', '###']), 5),
+  _Family(BlockShape.fromRows(<String>['###', '###', '###']), 1),
 
   // Corners.
-  _Family(BlockShape.fromRows(<String>['#.', '##']), 4),
+  _Family(BlockShape.fromRows(<String>['#.', '##']), 5),
   _Family(BlockShape.fromRows(<String>['#..', '#..', '###']), 2),
 
   // Tetrominoes.

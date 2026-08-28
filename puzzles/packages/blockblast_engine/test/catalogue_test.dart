@@ -44,13 +44,34 @@ void main() {
     );
   });
 
-  test('the 1x1 is in the catalogue and is the rarest thing in it', () {
+  test('the pieces that decide a game are the rare ones', () {
+    // The 1x1 goes anywhere, so a common one would let a player dig out of
+    // any corner; the 9-cell block needs a third of the board free, so a
+    // common one would end runs on the deal. Both stay well below average.
+    final average = ShapeCatalogue.totalWeight / ShapeCatalogue.entries.length;
     final single = ShapeCatalogue.entries.singleWhere(
       (CataloguedShape e) => e.shape.size == 1,
     );
-    for (final entry in ShapeCatalogue.entries) {
-      expect(entry.weight, greaterThanOrEqualTo(single.weight));
-    }
+    final biggest = ShapeCatalogue.entries.reduce(
+      (CataloguedShape a, CataloguedShape b) =>
+          b.shape.size > a.shape.size ? b : a,
+    );
+    expect(biggest.shape.size, 9);
+    expect(single.weight, lessThan(average));
+    expect(biggest.weight, lessThan(average));
+    expect(biggest.weight, lessThanOrEqualTo(single.weight));
+  });
+
+  test('the 2x3 block is not a stranger', () {
+    // It was 5.4% of draws and players noticed its absence, which is the
+    // wrong thing for a shape to be memorable for.
+    final rect = ShapeCatalogue.entries.where(
+      (CataloguedShape e) => e.shape.size == 6,
+    );
+    expect(rect, hasLength(2), reason: 'two orientations');
+    final share = rect.fold(0, (int sum, CataloguedShape e) => sum + e.weight) /
+        ShapeCatalogue.totalWeight;
+    expect(share, greaterThan(0.07));
   });
 
   test('weights cover the whole draw range and nothing beyond it', () {
