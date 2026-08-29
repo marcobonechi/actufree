@@ -63,6 +63,41 @@ class CelebrationParticle {
   }
 }
 
+/// A shell on its way up, waiting to go off.
+///
+/// Drawn as a single bright dot while it climbs, which is what makes a
+/// firework read as a firework: the eye follows something up, and then it
+/// bursts. A ring that simply appeared would be a burst in a different place.
+class CelebrationShell {
+  /// Creates a shell.
+  CelebrationShell({
+    required this.position,
+    required this.velocity,
+    required this.color,
+    required this.delay,
+    required this.fuse,
+  });
+
+  /// Where it is now, in unit coordinates.
+  Offset position;
+
+  /// Where it is going.
+  Offset velocity;
+
+  /// What colour it will go off in.
+  final Color color;
+
+  /// How long until it is launched. Staggers a volley so the shells go up one
+  /// after another rather than as a single row.
+  double delay;
+
+  /// How long after launching until it goes off.
+  double fuse;
+
+  /// Whether it has left the ground.
+  bool get isFlying => delay <= 0;
+}
+
 /// A field of thrown colour, with no opinion about how it is drawn.
 ///
 /// Kept apart from the widget so the physics can be stepped by hand in a test
@@ -75,13 +110,18 @@ class CelebrationField {
 
   final Random _random;
   final List<CelebrationParticle> _particles = <CelebrationParticle>[];
+  final List<CelebrationShell> _shells = <CelebrationShell>[];
 
   /// What is currently in the air.
   List<CelebrationParticle> get particles =>
       List<CelebrationParticle>.unmodifiable(_particles);
 
+  /// Shells still climbing.
+  List<CelebrationShell> get shells =>
+      List<CelebrationShell>.unmodifiable(_shells);
+
   /// Whether anything is still in the air.
-  bool get isActive => _particles.isNotEmpty;
+  bool get isActive => _particles.isNotEmpty || _shells.isNotEmpty;
 
   /// Throws [count] particles outwards from [origin] in unit coordinates.
   ///
@@ -130,6 +170,56 @@ class CelebrationField {
     }
   }
 
+  /// Sends up [count] shells, one after another, each bursting into a ring.
+  ///
+  /// A shape of its own, and deliberately not either of the others: the
+  /// fountain sprays from the bottom edge and a burst goes off where it is
+  /// put, while this climbs first and goes off somewhere up the screen. Each
+  /// shell keeps a single colour so it reads as one firework rather than as
+  /// confetti that happens to be round.
+  void fireworks({required List<Color> colors, int count = 3}) {
+    if (colors.isEmpty) return;
+    for (var i = 0; i < count; i++) {
+      // Away from the very edges, where half the ring would be off-screen.
+      final from = Offset(0.2 + _random.nextDouble() * 0.6, 1.05);
+      _shells.add(
+        CelebrationShell(
+          position: from,
+          velocity: Offset(
+            (_random.nextDouble() - 0.5) * 0.1,
+            -(1.15 + _random.nextDouble() * 0.35),
+          ),
+          color: colors[_random.nextInt(colors.length)],
+          delay: i * (0.22 + _random.nextDouble() * 0.16),
+          fuse: 0.5 + _random.nextDouble() * 0.22,
+        ),
+      );
+    }
+  }
+
+  /// Bursts [shell] into an even ring.
+  ///
+  /// Even, unlike [burst], which scatters. The ring is the whole reason a
+  /// firework looks like one.
+  void _detonate(CelebrationShell shell) {
+    const int sparks = 38;
+    for (var i = 0; i < sparks; i++) {
+      final angle = i / sparks * 2 * pi + _random.nextDouble() * 0.08;
+      final force = 0.62 + _random.nextDouble() * 0.16;
+      _particles.add(
+        CelebrationParticle(
+          position: shell.position,
+          velocity: Offset(cos(angle) * force, sin(angle) * force),
+          color: shell.color,
+          size: 0.011 + _random.nextDouble() * 0.010,
+          angle: _random.nextDouble() * 2 * pi,
+          spin: (_random.nextDouble() - 0.5) * 3,
+          life: 1.1 + _random.nextDouble() * 0.7,
+        ),
+      );
+    }
+  }
+
   void _spawn(Offset at, Offset velocity, List<Color> colors) {
     _particles.add(
       CelebrationParticle(
@@ -147,6 +237,28 @@ class CelebrationField {
   /// Moves everything on by [seconds] and forgets what has finished.
   void advance(double seconds) {
     if (seconds <= 0) return;
+
+    final flying = <CelebrationShell>[];
+    for (final shell in _shells) {
+      if (!shell.isFlying) {
+        shell.delay -= seconds;
+        flying.add(shell);
+        continue;
+      }
+      shell.fuse -= seconds;
+      if (shell.fuse <= 0) {
+        _detonate(shell);
+        continue;
+      }
+      shell.velocity =
+          shell.velocity + Offset(0, _gravity * seconds);
+      shell.position += shell.velocity * seconds;
+      flying.add(shell);
+    }
+    _shells
+      ..clear()
+      ..addAll(flying);
+
     final kept = <CelebrationParticle>[];
     for (final particle in _particles) {
       particle.age += seconds;
@@ -164,5 +276,8 @@ class CelebrationField {
   }
 
   /// Clears the field.
-  void clear() => _particles.clear();
+  void clear() {
+    _particles.clear();
+    _shells.clear();
+  }
 }

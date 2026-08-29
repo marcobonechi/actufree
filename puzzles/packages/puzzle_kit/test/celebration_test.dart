@@ -113,6 +113,85 @@ void main() {
     });
   });
 
+  group('fireworks', () {
+    test('shells wait their turn rather than going up as a row', () {
+      final field = CelebrationField(random: Random(11))
+        ..fireworks(colors: palette, count: 3);
+      expect(field.shells, hasLength(3));
+      expect(field.isActive, isTrue);
+      expect(field.particles, isEmpty, reason: 'nothing has gone off yet');
+      final flying = field.shells.where((CelebrationShell s) => s.isFlying);
+      expect(flying, hasLength(1), reason: 'the rest are still waiting');
+    });
+
+    test('a shell keeps one colour, so it reads as one firework', () {
+      final field = CelebrationField(random: Random(12))
+        ..fireworks(colors: palette, count: 1);
+      final shell = field.shells.single;
+      while (field.particles.isEmpty) {
+        field.advance(1 / 60);
+      }
+      for (final particle in field.particles) {
+        expect(particle.color, shell.color);
+      }
+    });
+
+    test('a shell climbs before it goes off', () {
+      final field = CelebrationField(random: Random(13))
+        ..fireworks(colors: palette, count: 1);
+      final start = field.shells.single.position.dy;
+      while (field.particles.isEmpty) {
+        field.advance(1 / 60);
+      }
+      // The ring appears well above where the shell was launched.
+      expect(field.particles.first.position.dy, lessThan(start - 0.2));
+    });
+
+    test('it goes off as a ring, not a scatter', () {
+      final field = CelebrationField(random: Random(14))
+        ..fireworks(colors: palette, count: 1);
+      while (field.particles.isEmpty) {
+        field.advance(1 / 60);
+      }
+      // Every spark leaves at about the same speed, which is what makes a
+      // ring; a scatter has some going twice as far as others.
+      final speeds = field.particles
+          .map((CelebrationParticle p) => p.velocity.distance)
+          .toList();
+      expect(speeds.reduce(max) / speeds.reduce(min), lessThan(1.5));
+      // And they leave in every direction.
+      final up = field.particles.where((CelebrationParticle p) => p.velocity.dy < 0);
+      expect(up.length / field.particles.length, closeTo(0.5, 0.2));
+    });
+
+    test('a volley finishes and leaves nothing behind', () {
+      final field = CelebrationField(random: Random(15))
+        ..fireworks(colors: palette, count: 4);
+      var seconds = 0.0;
+      while (field.isActive && seconds < 30) {
+        field.advance(1 / 60);
+        seconds += 1 / 60;
+      }
+      expect(field.isActive, isFalse, reason: 'still going after ${seconds}s');
+      expect(field.shells, isEmpty);
+      expect(seconds, lessThan(8));
+    });
+
+    test('nothing is sent up when there are no colours', () {
+      final field = CelebrationField(random: Random(16))
+        ..fireworks(colors: const <Color>[]);
+      expect(field.isActive, isFalse);
+    });
+
+    test('clearing takes the shells with it', () {
+      final field = CelebrationField(random: Random(17))
+        ..fireworks(colors: palette, count: 3)
+        ..clear();
+      expect(field.isActive, isFalse);
+      expect(field.shells, isEmpty);
+    });
+  });
+
   group('the scope', () {
     testWidgets('a screen finds the cue the app put up', (tester) async {
       final cue = CelebrationCue();

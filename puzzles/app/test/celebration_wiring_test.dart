@@ -6,6 +6,7 @@ import 'package:chess_engine/chess_engine.dart' as chess;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
+import 'package:puzzles_app/blockblast/block_game.dart';
 import 'package:puzzles_app/blockblast/block_screen.dart';
 import 'package:puzzles_app/blockblast/board_view.dart';
 import 'package:puzzles_app/blockblast/hand_tray.dart';
@@ -21,13 +22,18 @@ import 'chess_match_test.dart' show firstLegalMove;
 ///
 /// No layer is put up in these tests, so nothing drains the cue and what the
 /// screen asked for is still sitting there to be inspected.
-({int particles, bool fromBelow}) whatWasThrown(CelebrationCue cue) {
+({int particles, int shells, bool fromBelow}) whatWasThrown(
+  CelebrationCue cue,
+) {
   final field = CelebrationField(random: Random(1));
   for (final request in cue.take()) {
     request(field);
   }
   return (
     particles: field.particles.length,
+    // Fireworks put shells up rather than colour out: nothing exists until one
+    // of them goes off, so the shells are how that request is recognised.
+    shells: field.shells.length,
     // A fountain starts below the bottom edge and climbs in; a burst starts
     // where it was thrown from, which is always on the screen.
     fromBelow: field.particles.isNotEmpty &&
@@ -218,6 +224,33 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(whatWasThrown(cue).particles, 0);
+    });
+
+    testWidgets('passing a milestone sends up fireworks, not confetti', (
+      tester,
+    ) async {
+      final cue = CelebrationCue();
+      await tester.pumpWidget(
+        host(
+          cue,
+          BlockBlastScreen(
+            initial: gameWith(
+              board: BlockBoard.empty(),
+              hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+              score: kPointsPerCheer - 2,
+            ),
+          ),
+        ),
+      );
+      await drop(tester, 0, square, const Coord(3, 3));
+
+      final thrown = whatWasThrown(cue);
+      expect(thrown.shells, greaterThan(0), reason: 'shells, not a spray');
+      expect(
+        thrown.particles,
+        0,
+        reason: 'nothing is out yet: the shells have to go up first',
+      );
     });
 
     testWidgets('a single line throws nothing', (tester) async {

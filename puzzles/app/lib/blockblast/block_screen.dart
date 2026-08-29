@@ -130,6 +130,13 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
       cue.fountain(colors: colors);
       return;
     }
+    if (_game.cheer == Cheer.milestone) {
+      // Fireworks rather than the fountain: a milestone is about the run as a
+      // whole rather than the move that happened to cross it, and it should
+      // not look like the board just did something.
+      cue.fireworks(colors: colors);
+      return;
+    }
     final from = _whereItHappened();
     if (from == null) return;
     cue.burst(

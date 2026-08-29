@@ -9,6 +9,13 @@ import 'package:flutter/foundation.dart';
 /// noticing.
 const int kDoublesPerCheer = 3;
 
+/// How many points between one milestone celebration and the next.
+///
+/// A median run scores a little over 700, so this lands three or four times in
+/// a good one — often enough to be something to play towards, rare enough that
+/// arriving at one still means something.
+const int kPointsPerCheer = 200;
+
 /// Something worth throwing colour at.
 enum Cheer {
   /// The board came out completely empty. The rarest thing in the game: about
@@ -17,6 +24,9 @@ enum Cheer {
 
   /// Three lines or more from one piece. About one run in sixteen.
   bigClear,
+
+  /// Another [kPointsPerCheer] points on the board.
+  milestone,
 
   /// The third double since the last time this fired.
   doubles,
@@ -54,7 +64,12 @@ final class HintStep {
 /// living with it is most of what a score means here.
 class BlockBlastGame extends ChangeNotifier {
   /// Plays [state], which is either a new game or one restored from a save.
-  BlockBlastGame(this._state);
+  BlockBlastGame(BlockGame state)
+      : _state = state,
+        // Worked out here rather than lazily: read for the first time after a
+        // placement, it would take its baseline from the score that placement
+        // just produced and the milestone would never be seen to be crossed.
+        _milestone = state.score ~/ kPointsPerCheer;
 
   BlockGame _state;
   int? _carrying;
@@ -70,6 +85,7 @@ class BlockBlastGame extends ChangeNotifier {
   Cheer? _cheer;
   int _cheerTick = 0;
   int _doubles = 0;
+  int _milestone;
 
   /// The game as the engine sees it.
   BlockGame get state => _state;
@@ -122,6 +138,12 @@ class BlockBlastGame extends ChangeNotifier {
   /// The same reason the clear animation has a tick: two identical cheers in a
   /// row are indistinguishable by value alone.
   int get cheerTick => _cheerTick;
+
+  /// How many milestones this run has passed.
+  ///
+  /// Taken from the score it resumed at, so a run picked up at 600 points does
+  /// not celebrate the first three again on its next placement.
+  int get milestonesPassed => _milestone;
 
   /// How many doubles have landed since the last cheer for them.
   ///
@@ -259,10 +281,19 @@ class BlockBlastGame extends ChangeNotifier {
   void _noteCheer(PlacementAccepted result) {
     final lines = result.clear.lineCount;
     if (lines == 2) _doubles++;
+    final passed = _state.score ~/ kPointsPerCheer;
+    final crossed = passed > _milestone;
+    _milestone = passed;
+
+    // Ranked by how rarely each happens, so the scarcer thing is what the
+    // player sees. Crossing a milestone on a triple shows the triple, which is
+    // twenty times the rarer of the two.
     if (_state.board.isEmpty && !result.clear.isEmpty) {
       _cheer = Cheer.sweep;
     } else if (lines >= 3) {
       _cheer = Cheer.bigClear;
+    } else if (crossed) {
+      _cheer = Cheer.milestone;
     } else if (lines == 2 && _doubles % kDoublesPerCheer == 0) {
       _cheer = Cheer.doubles;
     } else {
@@ -287,6 +318,7 @@ class BlockBlastGame extends ChangeNotifier {
     _hint = null;
     _cheer = null;
     _doubles = 0;
+    _milestone = 0;
     _landed = const <Coord>{};
     _clearing = const <Coord>{};
     _lastPoints = 0;

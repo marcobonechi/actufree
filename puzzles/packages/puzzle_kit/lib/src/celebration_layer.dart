@@ -25,6 +25,14 @@ class CelebrationCue extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sends up shells that climb and burst into rings.
+  void fireworks({required List<Color> colors, int count = 3}) {
+    _pending.add(
+      (CelebrationField field) => field.fireworks(colors: colors, count: count),
+    );
+    notifyListeners();
+  }
+
   /// Throws colour up from the bottom of the whole layer.
   void fountain({required List<Color> colors, int count = 90}) {
     _pending.add(
@@ -132,7 +140,10 @@ class _CelebrationLayerState extends State<CelebrationLayer>
             child: IgnorePointer(
               child: CustomPaint(
                 key: celebrationPaintKey,
-                painter: _CelebrationPainter(_field.particles),
+                painter: _CelebrationPainter(
+                  _field.particles,
+                  _field.shells,
+                ),
               ),
             ),
           ),
@@ -171,12 +182,14 @@ class CelebrationScope extends InheritedWidget {
 }
 
 class _CelebrationPainter extends CustomPainter {
-  const _CelebrationPainter(this.particles);
+  const _CelebrationPainter(this.particles, this.shells);
 
   final List<CelebrationParticle> particles;
+  final List<CelebrationShell> shells;
 
   @override
   void paint(Canvas canvas, Size size) {
+    _paintShells(canvas, size);
     // Little rounded squares rather than circles or streamers: the games are
     // made of blocks and squares, and the celebration should look like it
     // came from the same place.
@@ -202,6 +215,32 @@ class _CelebrationPainter extends CustomPainter {
         Paint()..color = particle.color.withValues(alpha: particle.opacity),
       );
       canvas.restore();
+    }
+  }
+
+  /// Draws each climbing shell as a bright dot with a short tail.
+  ///
+  /// The tail is what makes it read as travelling rather than hovering, and it
+  /// costs one more rounded rectangle behind the dot.
+  void _paintShells(Canvas canvas, Size size) {
+    final unit = size.shortestSide;
+    for (final shell in shells) {
+      if (!shell.isFlying) continue;
+      final at = Offset(
+        shell.position.dx * size.width,
+        shell.position.dy * size.height,
+      );
+      final tail = at - Offset(0, shell.velocity.dy * 0.075 * size.height);
+      canvas
+        ..drawLine(
+          at,
+          tail,
+          Paint()
+            ..color = shell.color.withValues(alpha: 0.35)
+            ..strokeWidth = unit * 0.009
+            ..strokeCap = StrokeCap.round,
+        )
+        ..drawCircle(at, unit * 0.011, Paint()..color = shell.color);
     }
   }
 

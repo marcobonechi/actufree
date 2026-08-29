@@ -366,6 +366,68 @@ void main() {
       expect(game.cheerTick, 1, reason: 'only the third fires');
     });
 
+    test('crossing a milestone is cheered', () {
+      // A placement that takes the score past a multiple of the interval.
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.empty(),
+          hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          score: kPointsPerCheer - 2,
+        ),
+      );
+      // Deliberately not reading milestonesPassed first: doing so once hid a
+      // bug where the baseline was only worked out on first read, by which
+      // time the placement had already moved the score past it.
+      play(game, 0, const Coord(3, 3));
+      expect(game.score, greaterThanOrEqualTo(kPointsPerCheer));
+      expect(game.cheer, Cheer.milestone);
+      expect(game.milestonesPassed, 1);
+    });
+
+    test('a placement short of the next milestone is not', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.empty(),
+          hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          score: kPointsPerCheer - 40,
+        ),
+      );
+      play(game, 0, const Coord(3, 3));
+      expect(game.cheer, isNull);
+      expect(game.milestonesPassed, 0);
+    });
+
+    test('a resumed run does not celebrate the milestones it arrived with', () {
+      // Picked up at three milestones in: the next placement owes nothing.
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.empty(),
+          hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+          score: kPointsPerCheer * 3 + 10,
+        ),
+      );
+      expect(game.milestonesPassed, 3);
+      play(game, 0, const Coord(3, 3));
+      expect(game.cheer, isNull);
+    });
+
+    test('a rarer thing outranks a milestone that lands with it', () {
+      // Three lines and a milestone at once: the triple is twenty times the
+      // rarer of the two, so that is what the player sees.
+      final game = BlockBlastGame(
+        gameWith(
+          board: nearlyFull(3),
+          hand: <BlockPiece?>[BlockPiece(bar(3), 1), null, null],
+          score: kPointsPerCheer - 2,
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 3, boardSize - 1));
+      expect(game.score, greaterThan(kPointsPerCheer));
+      expect(game.cheer, Cheer.bigClear);
+      expect(game.milestonesPassed, 1, reason: 'still counted, just not shown');
+      expect(game.cheerTick, 1, reason: 'one cheer, not two');
+    });
+
     test('starting again forgets the count', () {
       final game = BlockBlastGame(
         gameWith(
@@ -377,6 +439,7 @@ void main() {
       expect(game.doublesTowardsCheer, 1);
       game.restart(3);
       expect(game.doublesTowardsCheer, 0);
+      expect(game.milestonesPassed, 0);
       expect(game.cheer, isNull);
     });
   });
