@@ -152,10 +152,25 @@ class _ChessScreenState extends State<ChessScreen> {
     }
   }
 
+  /// Whether this ending is somebody's win worth throwing colour at.
+  ///
+  /// A draw is not, and losing to the computer certainly is not. Against
+  /// another person on the same phone either result is somebody's win, and the
+  /// two of them can work out whose.
+  bool _worthCelebrating(Outcome outcome) {
+    final winner = outcome.winner;
+    if (winner == null) return false;
+    final human = widget.opponent.human;
+    return human == null || winner == human;
+  }
+
   Future<void> _endGame() async {
     if (_announcedEnd || !_match.isOver) return;
     _announcedEnd = true;
     final outcome = _match.outcome!;
+    if (_worthCelebrating(outcome)) {
+      CelebrationScope.maybeOf(context)?.fountain(colors: kOkabeItoPieces);
+    }
     await showDialog<void>(
       context: context,
       barrierDismissible: false,

@@ -231,6 +231,156 @@ void main() {
     expect(game.clearing, isEmpty);
   });
 
+  group('cheers', () {
+    BlockShape bar(int height) =>
+        BlockShape.fromRows(<String>[for (var i = 0; i < height; i++) '#']);
+
+    /// The bottom [rows] rows one cell short, with a stray block up top.
+    ///
+    /// The stray matters: without it, clearing the only filled rows empties
+    /// the board, and every one of these would be testing the sweep instead
+    /// of what it meant to.
+    BlockBoard nearlyFull(int rows) => BlockBoard.fromRows(<String>[
+          for (var row = 0; row < boardSize; row++)
+            if (row == 0)
+              '1.......'
+            else if (row >= boardSize - rows)
+              '1111111.'
+            else
+              '........',
+        ]);
+
+    void play(BlockBlastGame game, int index, Coord anchor) {
+      game
+        ..startDrag(index)
+        ..updateDrag(anchor)
+        ..drop();
+    }
+
+    test('an ordinary placement is not an occasion', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.empty(),
+          hand: <BlockPiece?>[BlockPiece(square, 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(3, 3));
+      expect(game.cheer, isNull);
+      expect(game.cheerTick, 0);
+    });
+
+    test('a single line is not either', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: nearlyFull(1),
+          hand: <BlockPiece?>[BlockPiece(single, 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 1, boardSize - 1));
+      expect(game.lastLines, 1);
+      expect(game.cheer, isNull);
+      expect(game.cheerTick, 0);
+    });
+
+    test('two lines on their own are not, the first time', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: nearlyFull(2),
+          hand: <BlockPiece?>[BlockPiece(bar(2), 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 2, boardSize - 1));
+      expect(game.lastLines, 2);
+      expect(game.cheer, isNull);
+      expect(game.doublesTowardsCheer, 1);
+    });
+
+    test('three lines at once is', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: nearlyFull(3),
+          hand: <BlockPiece?>[BlockPiece(bar(3), 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 3, boardSize - 1));
+      expect(game.lastLines, 3);
+      expect(game.state.board.isEmpty, isFalse, reason: 'the stray survives');
+      expect(game.cheer, Cheer.bigClear);
+      expect(game.cheerTick, 1);
+    });
+
+    test('emptying the board outranks whatever cleared it', () {
+      // No stray this time, so the three lines take the last of it with them.
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.fromRows(<String>[
+            for (var row = 0; row < boardSize; row++)
+              if (row >= boardSize - 3) '1111111.' else '........',
+          ]),
+          hand: <BlockPiece?>[BlockPiece(bar(3), 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 3, boardSize - 1));
+      expect(game.state.board.isEmpty, isTrue);
+      expect(game.cheer, Cheer.sweep, reason: 'the rarer of the two');
+      expect(game.cheerTick, 1, reason: 'one cheer, not two');
+    });
+
+    test('every third double is cheered, and the two before it are not', () {
+      // Three pairs of rows, each a cell short in a different column, so one
+      // hand can make three separate doubles without the board being rebuilt
+      // underneath the counter.
+      final game = BlockBlastGame(
+        gameWith(
+          board: BlockBoard.fromRows(<String>[
+            '1.......',
+            '........',
+            '1111111.',
+            '1111111.',
+            '111111.1',
+            '111111.1',
+            '11111.11',
+            '11111.11',
+          ]),
+          hand: <BlockPiece?>[
+            BlockPiece(bar(2), 1),
+            BlockPiece(bar(2), 2),
+            BlockPiece(bar(2), 3),
+          ],
+        ),
+      );
+
+      final cheers = <Cheer?>[];
+      for (final (index, anchor) in <(int, Coord)>[
+        (0, Coord(2, 7)),
+        (1, Coord(4, 6)),
+        (2, Coord(6, 5)),
+      ]) {
+        play(game, index, anchor);
+        expect(game.lastLines, 2, reason: 'piece $index should take two');
+        cheers.add(game.cheer);
+      }
+
+      expect(game.doublesTowardsCheer, kDoublesPerCheer);
+      expect(cheers, <Cheer?>[null, null, Cheer.doubles]);
+      expect(game.cheerTick, 1, reason: 'only the third fires');
+    });
+
+    test('starting again forgets the count', () {
+      final game = BlockBlastGame(
+        gameWith(
+          board: nearlyFull(2),
+          hand: <BlockPiece?>[BlockPiece(bar(2), 1), null, null],
+        ),
+      );
+      play(game, 0, const Coord(boardSize - 2, boardSize - 1));
+      expect(game.doublesTowardsCheer, 1);
+      game.restart(3);
+      expect(game.doublesTowardsCheer, 0);
+      expect(game.cheer, isNull);
+    });
+  });
+
   test('every change notifies, so the screen redraws', () {
     var notifications = 0;
     final game = BlockBlastGame(BlockGame.newGame(6))

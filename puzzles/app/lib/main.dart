@@ -16,6 +16,7 @@ Future<void> main() async {
       store: GameStore(storage),
       scores: BestScores(storage),
       settings: await SettingsController.load(storage),
+      cheers: CelebrationCue(),
     ),
   );
 }
@@ -27,6 +28,7 @@ class ActufreeApp extends StatelessWidget {
     required this.store,
     required this.scores,
     required this.settings,
+    required this.cheers,
     super.key,
   });
 
@@ -39,6 +41,9 @@ class ActufreeApp extends StatelessWidget {
   /// The player's preferences.
   final SettingsController settings;
 
+  /// Where a game asks for a celebration.
+  final CelebrationCue cheers;
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -49,8 +54,18 @@ class ActufreeApp extends StatelessWidget {
         // One backdrop behind the whole app rather than one per screen: it
         // stays put across route transitions, which is what makes it read as
         // the app's surface rather than as decoration on a particular page.
-        builder: (BuildContext context, Widget? child) =>
-            PuzzleBackdrop(child: child ?? const SizedBox.shrink()),
+        builder: (BuildContext context, Widget? child) => PuzzleBackdrop(
+          // The celebration wraps everything the navigator draws, so colour
+          // thrown at a win lands over the app bar and the dialog announcing
+          // it rather than being trapped inside one screen's body.
+          child: CelebrationScope(
+            cue: cheers,
+            child: CelebrationLayer(
+              cue: cheers,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
         theme: actufreeTheme(Brightness.light),
         darkTheme: actufreeTheme(Brightness.dark),
         themeMode: settings.themeMode,

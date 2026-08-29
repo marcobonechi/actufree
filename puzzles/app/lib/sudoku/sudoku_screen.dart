@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:puzzle_kit/puzzle_kit.dart';
 import 'package:sudoku_engine/sudoku_engine.dart';
 
+import '../theme.dart';
 import 'board_view.dart';
 import 'number_pad.dart';
 import 'sudoku_game.dart';
@@ -80,6 +81,9 @@ class _SudokuScreenState extends State<SudokuScreen> {
   }
 
   Future<void> _showWin() async {
+    // Thrown before the dialog goes up, so the colour is already in the air
+    // behind it rather than arriving after the player has read the news.
+    CelebrationScope.maybeOf(context)?.fountain(colors: kOkabeItoPieces);
     await showDialog<void>(
       context: context,
       barrierDismissible: false,

@@ -84,6 +84,7 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
       ValueNotifier<Offset>(Offset.zero);
   late int _best = widget.best;
   bool _announcedEnd = false;
+  late int _seenCheer = _game.cheerTick;
 
   @override
   void initState() {
@@ -104,12 +105,56 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
 
   void _onGameChanged() {
     unawaited(_persist());
+    _celebrate();
     if (!_game.isOver || _announcedEnd) return;
     // The board finishes mid-build, so the dialog waits for the frame that
     // shows the final piece landing before covering it up.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _endGame();
     });
+  }
+
+  /// Throws colour when the last placement earned it.
+  ///
+  /// From where it happened, in the colours the board is currently wearing:
+  /// a cheer arriving from the wrong part of the screen, or in colours from
+  /// some other set, reads as unrelated to what the player just did.
+  void _celebrate() {
+    if (_game.cheerTick == _seenCheer) return;
+    _seenCheer = _game.cheerTick;
+    final cue = CelebrationScope.maybeOf(context);
+    if (cue == null) return;
+    final colors = blockPaletteOf(context).pieces;
+    if (_game.cheer == Cheer.sweep) {
+      // An empty board belongs to the whole screen, not to a row of it.
+      cue.fountain(colors: colors);
+      return;
+    }
+    final from = _whereItHappened();
+    if (from == null) return;
+    cue.burst(
+      origin: from,
+      colors: colors,
+      count: _game.cheer == Cheer.bigClear ? 44 : 26,
+    );
+  }
+
+  /// The middle of what just went out, as a fraction of the window.
+  ///
+  /// `null` when the board is not laid out, or when nothing was cleared.
+  Offset? _whereItHappened() {
+    final cells = _game.clearing;
+    if (cells.isEmpty) return null;
+    final box = _boardKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    final cell = box.size.width / boardSize;
+    var sum = Offset.zero;
+    for (final coord in cells) {
+      sum += Offset((coord.col + 0.5) * cell, (coord.row + 0.5) * cell);
+    }
+    final centre = box.localToGlobal(sum / cells.length.toDouble());
+    final window = MediaQuery.sizeOf(context);
+    return Offset(centre.dx / window.width, centre.dy / window.height);
   }
 
   /// Writes the run to its slot, or clears the slot once it is over — a
@@ -133,6 +178,11 @@ class _BlockBlastScreenState extends State<BlockBlastScreen> {
     setState(() {
       if (beaten) _best = score;
     });
+    if (beaten && mounted) {
+      // The run's only real win, and it lands on a dialog with nothing left
+      // to read, so it can have the whole screen.
+      CelebrationScope.maybeOf(context)?.fountain(colors: kOkabeItoPieces);
+    }
     await _showGameOver(score: score, beaten: beaten);
   }
 

@@ -1,6 +1,27 @@
 import 'package:blockblast_engine/blockblast_engine.dart';
 import 'package:flutter/foundation.dart';
 
+/// How many doubles have to stack up before they are worth a cheer.
+///
+/// A double lands about every 36 placements and 84% of runs see one, so
+/// celebrating each would be celebrating the ordinary. Every third lands about
+/// once a run, which is roughly how often a good stretch of play deserves
+/// noticing.
+const int kDoublesPerCheer = 3;
+
+/// Something worth throwing colour at.
+enum Cheer {
+  /// The board came out completely empty. The rarest thing in the game: about
+  /// one run in a hundred.
+  sweep,
+
+  /// Three lines or more from one piece. About one run in sixteen.
+  bigClear,
+
+  /// The third double since the last time this fired.
+  doubles,
+}
+
 /// One step of a shown hint: where a piece goes, and how far into the plan.
 final class HintStep {
   /// Records a step.
@@ -46,6 +67,9 @@ class BlockBlastGame extends ChangeNotifier {
   int _lastPoints = 0;
   int _lastLines = 0;
   HandPlan? _hint;
+  Cheer? _cheer;
+  int _cheerTick = 0;
+  int _doubles = 0;
 
   /// The game as the engine sees it.
   BlockGame get state => _state;
@@ -89,6 +113,22 @@ class BlockBlastGame extends ChangeNotifier {
 
   /// How many lines the last placement took out.
   int get lastLines => _lastLines;
+
+  /// What the last placement earned, if anything did.
+  Cheer? get cheer => _cheer;
+
+  /// Counts cheers, so the screen can tell a fresh one from a rebuild.
+  ///
+  /// The same reason the clear animation has a tick: two identical cheers in a
+  /// row are indistinguishable by value alone.
+  int get cheerTick => _cheerTick;
+
+  /// How many doubles have landed since the last cheer for them.
+  ///
+  /// Kept here rather than in the saved game: it exists to pace a celebration,
+  /// which is not a rule of Block Blast, and a resumed run starting its count
+  /// again costs nobody anything they will notice.
+  int get doublesTowardsCheer => _doubles;
 
   /// The plan being shown, or `null` when no hint is up.
   HandPlan? get hint => _hint;
@@ -199,6 +239,7 @@ class BlockBlastGame extends ChangeNotifier {
     _state = result.game;
     _hint = null;
     _landed = result.filled;
+    _noteCheer(result);
     _lastPoints = result.points;
     _lastLines = result.clear.lineCount;
     if (result.clear.isEmpty) {
@@ -208,6 +249,27 @@ class BlockBlastGame extends ChangeNotifier {
       _clearTick++;
     }
     notifyListeners();
+  }
+
+  /// Works out whether [result] is worth a celebration.
+  ///
+  /// Ranked, not combined: a placement that swept the board while clearing
+  /// three lines gets the sweep, because that is the rarer thing and two
+  /// celebrations at once is neither.
+  void _noteCheer(PlacementAccepted result) {
+    final lines = result.clear.lineCount;
+    if (lines == 2) _doubles++;
+    if (_state.board.isEmpty && !result.clear.isEmpty) {
+      _cheer = Cheer.sweep;
+    } else if (lines >= 3) {
+      _cheer = Cheer.bigClear;
+    } else if (lines == 2 && _doubles % kDoublesPerCheer == 0) {
+      _cheer = Cheer.doubles;
+    } else {
+      _cheer = null;
+      return;
+    }
+    _cheerTick++;
   }
 
   /// Abandons the drag without placing anything.
@@ -223,6 +285,8 @@ class BlockBlastGame extends ChangeNotifier {
     _state = BlockGame.newGame(seed);
     _carrying = null;
     _hint = null;
+    _cheer = null;
+    _doubles = 0;
     _landed = const <Coord>{};
     _clearing = const <Coord>{};
     _lastPoints = 0;
