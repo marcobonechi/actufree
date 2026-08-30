@@ -47,6 +47,44 @@ class SettingsScreen extends StatelessWidget {
                   selected: settings.themeMode == entry.key,
                   onTap: () => settings.setThemeMode(entry.key),
                 ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                child: Text(
+                  'Sound',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              SwitchListTile(
+                key: const ValueKey<String>('music-on'),
+                secondary: Icon(
+                  settings.musicMuted
+                      ? Icons.music_off_outlined
+                      : Icons.music_note_outlined,
+                ),
+                title: const Text('Music'),
+                subtitle: const Text('A loop on the menu, another in a game'),
+                value: !settings.musicMuted,
+                onChanged: (bool on) => settings.setMusicMuted(!on),
+              ),
+              ListTile(
+                leading: const Icon(Icons.volume_up_outlined),
+                title: Slider(
+                  key: const ValueKey<String>('music-volume'),
+                  value: settings.musicVolume,
+                  // Named as a percentage: "0.35" is a number the player has
+                  // no use for, and it is what a screen reader would say.
+                  label: '${(settings.musicVolume * 100).round()}%',
+                  divisions: 20,
+                  // Greyed rather than hidden while the music is off: the row
+                  // staying put says the volume is still set to something,
+                  // and the list does not jump as the switch is flipped.
+                  onChanged: settings.musicMuted
+                      ? null
+                      : settings.setMusicVolume,
+                ),
+              ),
             ],
           ),
         ),

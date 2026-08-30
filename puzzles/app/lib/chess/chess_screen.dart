@@ -48,7 +48,7 @@ class ChessScreen extends StatefulWidget {
   State<ChessScreen> createState() => _ChessScreenState();
 }
 
-class _ChessScreenState extends State<ChessScreen> {
+class _ChessScreenState extends State<ChessScreen> with GameMusic {
   late final ChessMatch _match = ChessMatch(
     widget.initial,
     opponent: widget.opponent,

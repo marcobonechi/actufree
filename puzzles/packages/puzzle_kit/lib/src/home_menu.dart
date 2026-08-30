@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import 'music_service.dart';
 import 'settings_controller.dart';
 import 'settings_screen.dart';
 
@@ -31,7 +34,7 @@ class GameEntry {
 /// Built with one game on purpose. The list is the seam a second game slots
 /// into, and having it in the shared layer now means the second game arrives
 /// as a list entry rather than as a reason to restructure.
-class HomeMenu extends StatelessWidget {
+class HomeMenu extends StatefulWidget {
   /// Creates the menu.
   const HomeMenu({
     required this.title,
@@ -54,6 +57,21 @@ class HomeMenu extends StatelessWidget {
   final SettingsController settings;
 
   @override
+  State<HomeMenu> createState() => _HomeMenuState();
+}
+
+class _HomeMenuState extends State<HomeMenu> {
+  @override
+  void initState() {
+    super.initState();
+    // The menu is where the app opens and where every game hands back, so
+    // this is the one place that has to ask for the menu loop. A game asks
+    // for its own on the way in and gives it back on the way out.
+    final MusicService? music = MusicScope.maybeOf(context);
+    if (music != null) unawaited(music.playMenu());
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
@@ -69,7 +87,7 @@ class HomeMenu extends StatelessWidget {
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (BuildContext context) =>
-                        SettingsScreen(settings: settings),
+                        SettingsScreen(settings: widget.settings),
                   ),
                 ),
               ),
@@ -83,20 +101,20 @@ class HomeMenu extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                     children: <Widget>[
                       Text(
-                        title,
+                        widget.title,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.displaySmall,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        tagline,
+                        widget.tagline,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 32),
-                      for (final game in games)
+                      for (final game in widget.games)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: Card(

@@ -39,7 +39,7 @@ class SudokuScreen extends StatefulWidget {
   State<SudokuScreen> createState() => _SudokuScreenState();
 }
 
-class _SudokuScreenState extends State<SudokuScreen> {
+class _SudokuScreenState extends State<SudokuScreen> with GameMusic {
   late final SudokuGame _game =
       SudokuGame(widget.puzzle, board: widget.resumeFrom)
         ..addListener(_onGameChanged);

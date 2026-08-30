@@ -10,6 +10,7 @@ export 'package:puzzle_store/puzzle_store.dart';
 export 'src/celebration.dart';
 export 'src/celebration_layer.dart';
 export 'src/home_menu.dart';
+export 'src/music_service.dart';
 export 'src/preferences_store.dart';
 export 'src/settings_controller.dart';
 export 'src/settings_screen.dart';

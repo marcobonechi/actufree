@@ -69,7 +69,7 @@ class BlockBlastScreen extends StatefulWidget {
   State<BlockBlastScreen> createState() => _BlockBlastScreenState();
 }
 
-class _BlockBlastScreenState extends State<BlockBlastScreen> {
+class _BlockBlastScreenState extends State<BlockBlastScreen> with GameMusic {
   late final BlockBlastGame _game = BlockBlastGame(widget.initial)
     ..addListener(_onGameChanged);
   final GlobalKey _boardKey = GlobalKey();

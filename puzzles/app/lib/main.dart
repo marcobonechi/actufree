@@ -11,12 +11,18 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final storage = await PreferencesStore.open();
+  final settings = await SettingsController.load(storage);
   runApp(
     ActufreeApp(
       store: GameStore(storage),
       scores: BestScores(storage),
-      settings: await SettingsController.load(storage),
+      settings: settings,
       cheers: CelebrationCue(),
+      music: MusicService(
+        settings: settings,
+        menuAsset: 'assets/audio/menu_loop.m4a',
+        matchAsset: 'assets/audio/match_loop.m4a',
+      ),
     ),
   );
 }
@@ -29,6 +35,7 @@ class ActufreeApp extends StatelessWidget {
     required this.scores,
     required this.settings,
     required this.cheers,
+    required this.music,
     super.key,
   });
 
@@ -43,6 +50,9 @@ class ActufreeApp extends StatelessWidget {
 
   /// Where a game asks for a celebration.
   final CelebrationCue cheers;
+
+  /// The music behind all of it.
+  final MusicService music;
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +70,15 @@ class ActufreeApp extends StatelessWidget {
           // it rather than being trapped inside one screen's body.
           child: CelebrationScope(
             cue: cheers,
-            child: CelebrationLayer(
-              cue: cheers,
-              child: child ?? const SizedBox.shrink(),
+            // Above the navigator for the same reason the backdrop is: one
+            // soundtrack for the app, not one per screen, so pushing a game
+            // changes the music instead of starting a second copy of it.
+            child: MusicScope(
+              music: music,
+              child: CelebrationLayer(
+                cue: cheers,
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),

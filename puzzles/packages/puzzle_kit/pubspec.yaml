@@ -12,6 +12,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  audio_session: ^0.2.4
+  just_audio: ^0.10.6
   puzzle_store:
     path: ../puzzle_store
   shared_preferences: ^2.3.2
