@@ -71,27 +71,21 @@ Return at the "key password" prompt. If you set a different one, edit the
 The file is gitignored (`android/.gitignore:12`, verified), so it will not be
 committed.
 
-## 2. Publish the privacy policy — REDO after the repo move
+## 2. Publish the privacy policy [DONE]
 
-Play requires a publicly reachable privacy policy URL before any track,
-internal included, and the URL that was live has moved with the repository.
-
-The policy was served by GitHub Pages from `sidevibe/actufree`, which is being
-closed. The same file has to be republished from the new home:
-
-In GitHub, repo **marcobonechi/actufree** -> Settings -> Pages -> Source:
-"Deploy from a branch" -> branch `main`, folder `/docs` -> Save. A minute later
-both of these should load, and they are the URLs the listing now uses:
+GitHub Pages serves `/docs` from `main` at **marcobonechi/actufree**, and the
+bytes on the live page are identical to the committed `docs/privacy.html`.
+Both URLs return 200 and are the ones the listing uses:
 
 - https://marcobonechi.github.io/actufree/
 - https://marcobonechi.github.io/actufree/privacy.html
 
-`docs/privacy.html` came across with the history and is unchanged, so this is
-purely a hosting switch — the policy text itself does not need revisiting.
+Pages is a per-repository setting and does not travel with the history, so if
+the repository ever moves again, this step comes undone with it even though
+nothing about the file changed.
 
-Do not close `sidevibe/actufree` until the new URLs return 200. Nothing is lost
-if you do (the content is here), but the old policy URL goes dark the moment
-the repository does, and that is the link Play checks.
+Re-check these before each release: Play rechecks the policy URL, and a listing
+pointing at a 404 will hold up a rollout.
 
 ## 3. Build the signed bundle [DONE]
 
