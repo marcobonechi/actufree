@@ -17,14 +17,14 @@ work (steps 4-8), which needs your Google account and cannot be done for you.
 - Application ID `io.github.marcobonechi.actufree`, version `1.0.0+1`, targetSdk 36 —
   which is what Play requires of new apps from 31 August 2026.
 - `flutter build appbundle --release` succeeds today (53.7 MB bundle).
-- The release manifest requests no `INTERNET` permission and nothing at
-  runtime, so the privacy policy's central claim — that the app cannot reach
-  the network at all — is enforced by the manifest rather than merely asserted.
-- It does request `ACCESS_NETWORK_STATE`, pulled in by `just_audio` when the
-  music was added. That is an install-time permission to *read* connectivity
-  status; it grants no network access. The policy's wording survives it, but
-  the app only plays bundled assets and never streams, so the permission is
-  unearned. See "Stripping ACCESS_NETWORK_STATE" below.
+- The shipped APK requests **no permissions at all** — verified with `aapt2
+  dump permissions` against the artifact itself, not the source manifest. The
+  only entry is Flutter's own app-private
+  `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, which is not shown to users.
+  `just_audio` brought in `ACCESS_NETWORK_STATE` with the music; the manifest
+  merger drops it (`tools:node="remove"` in `AndroidManifest.xml`).
+  The privacy policy's central claim — that the app cannot reach the network —
+  is therefore enforced by the manifest rather than merely asserted.
 - Store listing copy: `store/listing.md`. Icon, feature graphic, and four
   phone screenshots: this folder, all at the sizes Play requires.
 - Privacy policy written: `docs/privacy.html`.
@@ -96,7 +96,7 @@ pointing at a 404 will hold up a rollout.
 
 Done on 28 Aug 2026. `key.properties` is in place (mode 0600, gitignored) and
 the bundle at
-`puzzles/app/build/app/outputs/bundle/release/app-release.aab` (47.5 MB) is
+`puzzles/app/build/app/outputs/bundle/release/app-release.aab` (53.7 MB) is
 signed with the upload key — certificate SHA-256 matches the fingerprint in
 step 1 exactly, and is confirmed *not* to be the debug key. Package
 `io.github.marcobonechi.actufree`, versionCode 1.
@@ -291,19 +291,39 @@ Practical sequencing: start the closed test the same day internal testing goes
 live, from the same bundle. The 14 days then run in the background while the
 app is being tested normally, instead of starting after.
 
-## Stripping ACCESS_NETWORK_STATE
+## The web build, and what the policy URL now depends on
 
-`just_audio` declares this permission because it supports streaming. Actufree
-plays only bundled assets, so it is inherited rather than needed, and the
-manifest merger will drop it on request:
+Actufree also runs in a browser at
+https://marcobonechi.github.io/actufree/app/ — and, more importantly for a
+release, the same GitHub Actions workflow publishes `privacy.html`. The policy
+URL Play checks is no longer a file sitting on a branch; it is the output of
+`.github/workflows/pages.yml`. A red build eventually means a dead policy link,
+which is why that workflow asserts the policy, the landing page, the favicon
+and the wasm binary all exist before it publishes anything.
 
-```xml
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"
-                     tools:node="remove" />
+The web build is WebAssembly only. `blockblast_engine` packs the board into a
+64-bit bitboard and JavaScript integers carry 53 bits, so a JS build computes
+wrong masks — quietly, since only one literal is caught at compile time.
+Flutter always emits a JS fallback and offers no flag to suppress it, so
+deployment replaces it with `puzzles/tool/web_js_fallback.js`, a stub that
+tells the visitor their browser is unsupported.
+
+**If `app/main.dart.js` is ever ~2.4 MB instead of ~880 bytes, the swap
+failed** and browsers without WasmGC are playing a broken game. Worth checking
+after any change to the workflow or to `deploy_web.sh`.
+
+## Installing a build on a device, without fooling yourself
+
+`flutter install` will happily push a stale APK rather than build one — it did
+exactly that here, installing a six-day-old artifact with the pre-rename
+package name. `flutter build ios` similarly cannot provision a new bundle ID,
+because it targets a generic destination; only a device-targeted
+`flutter run -d <udid>` can, and only over USB, not a wireless connection.
+
+So verify the artifact, never the command's output:
+
+```sh
+aapt2 dump packagename build/app/outputs/flutter-apk/app-release.apk
+adb shell pm list packages | grep actufree
+codesign -dv build/ios/iphoneos/Runner.app
 ```
-
-Worth doing, because "requests no permissions at all" is a claim almost nothing
-in this category can make, and it is checkable by anyone who looks at the store
-listing's permission list. Verify the music still plays after removing it.
