@@ -205,6 +205,25 @@ def main():
                   render(size, 'background'), size)
         print('android adaptive', density, size)
 
+    # Web: the favicon plus the two sizes a browser installs from. A maskable
+    # icon may be cropped to a circle, so the mark is scaled into the safe zone
+    # while the ground still fills the canvas.
+    web = os.path.join(app, 'web')
+    write_png(os.path.join(web, 'favicon.png'), render(32, 'full'), 32)
+    print('web favicon 32')
+    for size in (192, 512):
+        write_png(os.path.join(web, 'icons/Icon-%d.png' % size),
+                  render(size, 'full'), size)
+        write_png(os.path.join(web, 'icons/Icon-maskable-%d.png' % size),
+                  render(size, 'full', scale=0.62), size)
+        print('web icon', size)
+
+    # The two static pages share the mark, so a tab shows the same thing
+    # whether it is the site or the app.
+    docs = os.path.join(os.path.dirname(__file__), '..', '..', 'docs')
+    write_png(os.path.join(docs, 'favicon.png'), render(32, 'full'), 32)
+    print('site favicon 32')
+
     write_png(os.path.join(store, 'play-icon-512.png'),
               render(512, 'full'), 512, keep_alpha=True)
     print('store icon 512')

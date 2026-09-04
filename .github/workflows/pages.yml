@@ -44,7 +44,7 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site/app
-          cp docs/*.html _site/
+          cp docs/*.html docs/*.png _site/
           cp -R puzzles/app/build/web/. _site/app/
           # Debug symbol maps symbolicate stack traces; they never run.
           find _site/app -name '*.symbols' -delete
@@ -55,6 +55,7 @@ jobs:
         run: |
           test -f _site/privacy.html
           test -f _site/index.html
+          test -f _site/favicon.png
           test -f _site/app/main.dart.wasm
           echo "privacy policy, landing page and wasm binary all staged"
 

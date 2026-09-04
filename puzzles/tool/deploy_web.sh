@@ -10,8 +10,10 @@
 # unsupported rather than letting a broken game run.
 set -e
 
-APP_DIR="$(cd "$(dirname "$0")/../app" && pwd)"
-DEST="$(cd "$(dirname "$0")/../.." && pwd)/docs/app"
+# Resolved before the cd below, or the relative $0 stops meaning anything.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="$(cd "$HERE/../app" && pwd)"
+DEST="$(cd "$HERE/../.." && pwd)/docs/app"
 
 cd "$APP_DIR"
 flutter build web --wasm --release --base-href /actufree/app/
@@ -25,6 +27,6 @@ find "$DEST" -name "*.symbols" -delete
 
 # Replace the JS fallback (2.4 MB of subtly wrong game) with a refusal.
 # Same file the Pages workflow uses, so the two cannot drift apart.
-cp "$(dirname "$0")/web_js_fallback.js" "$DEST/main.dart.js"
+cp "$HERE/web_js_fallback.js" "$DEST/main.dart.js"
 
 echo "Staged $(du -sh "$DEST" | cut -f1) at docs/app/"
