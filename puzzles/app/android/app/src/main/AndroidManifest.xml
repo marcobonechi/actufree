@@ -1,4 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <!-- just_audio declares this because it supports streaming. Actufree only
+         ever plays bundled assets, so the permission is inherited rather than
+         needed, and an app that asks for nothing at all is worth keeping. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"
+                     tools:node="remove" />
     <application
         android:label="Actufree"
         android:name="${applicationName}"
