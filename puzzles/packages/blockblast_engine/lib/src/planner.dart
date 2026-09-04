@@ -257,8 +257,15 @@ final List<int> _rowMasks = List<int>.generate(
   growable: false,
 );
 
+// The board is a 64-bit bitboard, one bit per cell. dart2js cannot represent
+// a literal this wide — JavaScript integers carry 53 bits of precision — so
+// the seed is assembled at runtime instead. The wasm build, which is the only
+// web build we ship, computes the exact value; a JS build would compute a
+// wrong one, which is why web/flutter_bootstrap.js refuses to fall back to it.
+final int _colSeed = (0x01010101 << 32) | 0x01010101;
+
 final List<int> _colMasks = List<int>.generate(
   boardSize,
-  (int col) => 0x0101010101010101 << col,
+  (int col) => _colSeed << col,
   growable: false,
 );
