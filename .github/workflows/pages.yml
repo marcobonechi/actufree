@@ -1,0 +1,73 @@
+# Builds the site GitHub Pages serves: the two static pages in docs/, plus the
+# Flutter app compiled to WebAssembly at /app/.
+#
+# The build output used to be committed under docs/app/, which added 33 MB to
+# the repository on every deploy. Building here keeps it out of the history
+# entirely, at the cost of the site depending on this workflow succeeding.
+#
+# Pages must be set to "GitHub Actions" as its source, not "Deploy from a
+# branch", or this deploys nothing and the branch keeps serving a stale copy.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let a running one finish rather than cancelling,
+# so the live site is never left half-written.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.1
+          channel: stable
+          cache: true
+
+      - name: Build the app for the web
+        working-directory: puzzles/app
+        run: flutter build web --wasm --release --base-href /actufree/app/
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/app
+          cp docs/*.html _site/
+          cp -R puzzles/app/build/web/. _site/app/
+          # Debug symbol maps symbolicate stack traces; they never run.
+          find _site/app -name '*.symbols' -delete
+          # Refuse to run on JavaScript rather than run incorrectly.
+          cp puzzles/tool/web_js_fallback.js _site/app/main.dart.js
+
+      - name: Check the pages Play requires are present
+        run: |
+          test -f _site/privacy.html
+          test -f _site/index.html
+          test -f _site/app/main.dart.wasm
+          echo "privacy policy, landing page and wasm binary all staged"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

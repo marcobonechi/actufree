@@ -5,3 +5,7 @@
 .idea/
 .vscode/
 *.iml
+
+# The web build is assembled by .github/workflows/pages.yml, not committed.
+# deploy_web.sh still writes it here for local preview.
+docs/app/
