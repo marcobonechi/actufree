@@ -14,12 +14,17 @@ work (steps 4-8), which needs your Google account and cannot be done for you.
 - `android/app/build.gradle.kts` reads release signing from
   `android/key.properties` and falls back to the debug key when that file is
   absent, so nothing breaks before step 1.
-- Application ID `ai.sidevibe.actufree`, version `1.0.0+1`, targetSdk 36 —
+- Application ID `io.github.marcobonechi.actufree`, version `1.0.0+1`, targetSdk 36 —
   which is what Play requires of new apps from 31 August 2026.
-- `flutter build appbundle --release` succeeds today (47.5 MB bundle).
-- The release manifest requests **no** permissions — no `INTERNET`, nothing at
-  runtime. The privacy claims in `docs/privacy.html` are enforced by the
-  manifest, not just asserted.
+- `flutter build appbundle --release` succeeds today (53.7 MB bundle).
+- The release manifest requests no `INTERNET` permission and nothing at
+  runtime, so the privacy policy's central claim — that the app cannot reach
+  the network at all — is enforced by the manifest rather than merely asserted.
+- It does request `ACCESS_NETWORK_STATE`, pulled in by `just_audio` when the
+  music was added. That is an install-time permission to *read* connectivity
+  status; it grants no network access. The policy's wording survives it, but
+  the app only plays bundled assets and never streams, so the permission is
+  unearned. See "Stripping ACCESS_NETWORK_STATE" below.
 - Store listing copy: `store/listing.md`. Icon, feature graphic, and four
   phone screenshots: this folder, all at the sizes Play requires.
 - Privacy policy written: `docs/privacy.html`.
@@ -94,7 +99,7 @@ the bundle at
 `puzzles/app/build/app/outputs/bundle/release/app-release.aab` (47.5 MB) is
 signed with the upload key — certificate SHA-256 matches the fingerprint in
 step 1 exactly, and is confirmed *not* to be the debug key. Package
-`ai.sidevibe.actufree`, versionCode 1.
+`io.github.marcobonechi.actufree`, versionCode 1.
 
 That file is what you upload in step 7.
 
@@ -120,7 +125,7 @@ The previous account was closed for inactivity, so this is a new registration:
 25 USD again (the old fee is not refunded or transferable) at
 https://play.google.com/console/signup.
 
-Package name `ai.sidevibe.actufree` is unaffected. Closed accounts burn the
+Package name `io.github.marcobonechi.actufree` is unaffected. Closed accounts burn the
 package names they *published*, and the old account never published anything,
 so the name is free.
 
@@ -156,14 +161,14 @@ tied to which account owns the developer profile.
 
 Whichever account is used becomes the permanent owner of the developer
 account and cannot be swapped later without a support-driven transfer, so pick
-one that will outlive the project — a `sidevibe.ai` address rather than a
-personal inbox, if this is meant to be Sidevibe's.
+one that will outlive the project, since the developer account cannot be
+moved to another Google account without a support-driven transfer.
 
 ### Account type — decided: personal
 
-Sidevibe is not a registered legal entity, so an organization account is not
-available: it requires a D-U-N-S number, which requires a real business. That
-decides it — **personal account**.
+There is no registered legal entity behind this app, so an organization
+account is not available: it requires a D-U-N-S number, which requires a real
+business. That decides it — **personal account**.
 
 The consequence, carried forward: a personal account created now must run a
 closed test with at least 12 testers opted in for 14 continuous days before it
@@ -285,3 +290,20 @@ weeks up front rather than topping up mid-run.
 Practical sequencing: start the closed test the same day internal testing goes
 live, from the same bundle. The 14 days then run in the background while the
 app is being tested normally, instead of starting after.
+
+## Stripping ACCESS_NETWORK_STATE
+
+`just_audio` declares this permission because it supports streaming. Actufree
+plays only bundled assets, so it is inherited rather than needed, and the
+manifest merger will drop it on request:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"
+                     tools:node="remove" />
+```
+
+Worth doing, because "requests no permissions at all" is a claim almost nothing
+in this category can make, and it is checkable by anyone who looks at the store
+listing's permission list. Verify the music still plays after removing it.

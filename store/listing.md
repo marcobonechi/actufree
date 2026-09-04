@@ -69,7 +69,7 @@ for tablets" badge.
 - App or game: Game
 - Category: Puzzle
 - Tags: Sudoku, Brain games, Casual
-- Contact email: marco@sidevibe.ai
+- Contact email: marco.bonechi@gmail.com
 - Website: https://marcobonechi.github.io/actufree/
 - Privacy policy: https://marcobonechi.github.io/actufree/privacy.html
 
