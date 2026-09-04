@@ -71,17 +71,27 @@ Return at the "key password" prompt. If you set a different one, edit the
 The file is gitignored (`android/.gitignore:12`, verified), so it will not be
 committed.
 
-## 2. Publish the privacy policy [DONE]
+## 2. Publish the privacy policy — REDO after the repo move
 
-Done — GitHub Pages is serving `/docs` from `main`, and the bytes on the live
-page are identical to the committed `docs/privacy.html`. Both URLs return 200
-and are the ones the listing uses:
+Play requires a publicly reachable privacy policy URL before any track,
+internal included, and the URL that was live has moved with the repository.
 
-- https://sidevibe.github.io/actufree/
-- https://sidevibe.github.io/actufree/privacy.html
+The policy was served by GitHub Pages from `sidevibe/actufree`, which is being
+closed. The same file has to be republished from the new home:
 
-Re-check these before each release: Play rechecks the policy URL, and a listing
-pointing at a 404 will hold up a rollout.
+In GitHub, repo **marcobonechi/actufree** -> Settings -> Pages -> Source:
+"Deploy from a branch" -> branch `main`, folder `/docs` -> Save. A minute later
+both of these should load, and they are the URLs the listing now uses:
+
+- https://marcobonechi.github.io/actufree/
+- https://marcobonechi.github.io/actufree/privacy.html
+
+`docs/privacy.html` came across with the history and is unchanged, so this is
+purely a hosting switch — the policy text itself does not need revisiting.
+
+Do not close `sidevibe/actufree` until the new URLs return 200. Nothing is lost
+if you do (the content is here), but the old policy URL goes dark the moment
+the repository does, and that is the link Play checks.
 
 ## 3. Build the signed bundle [DONE]
 
@@ -215,7 +225,7 @@ complete. The answers for this app:
 
 | Section | Answer |
 | --- | --- |
-| Privacy policy | `https://sidevibe.github.io/actufree/privacy.html` |
+| Privacy policy | `https://marcobonechi.github.io/actufree/privacy.html` |
 | Ads | No, the app contains no ads |
 | App access | All functionality available without restrictions — no login |
 | Content rating | Questionnaire, category Game. No violence, no sexuality, no language, no controlled substances, no gambling, no user interaction, no data shared, no location. Comes out Everyone / PEGI 3. |

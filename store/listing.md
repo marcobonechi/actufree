@@ -70,8 +70,8 @@ for tablets" badge.
 - Category: Puzzle
 - Tags: Sudoku, Brain games, Casual
 - Contact email: marco@sidevibe.ai
-- Website: https://sidevibe.github.io/actufree/
-- Privacy policy: https://sidevibe.github.io/actufree/privacy.html
+- Website: https://marcobonechi.github.io/actufree/
+- Privacy policy: https://marcobonechi.github.io/actufree/privacy.html
 
 Both URLs are live (verified 200).
 
